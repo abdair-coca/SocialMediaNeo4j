@@ -4,6 +4,7 @@ import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { resolveMediaUrl, relativeTime } from '../lib/format.js';
 import CommentSection from './CommentSection.jsx';
+import OptionsPosts from './OptionsPosts.jsx';
 
 // Iconos inline
 const HeartIcon = ({ filled, className }) => (
@@ -102,6 +103,11 @@ export default function PostCard({ post, onChange }) {
     }
   }
 
+  function handleDelete() {
+  
+  }
+  const { user } = useAuth();
+
   return (
     <article className="neo-card overflow-hidden mb-6">
       {/* Header */}
@@ -128,6 +134,7 @@ export default function PostCard({ post, onChange }) {
           </Link>
           <p className="text-xs text-neo-muted">{relativeTime(post.createdAt)}</p>
         </div>
+        <OptionsPosts user={user} post={post} onDelete={handleDelete} />
       </header>
 
       {/* Imagen (opcional) */}

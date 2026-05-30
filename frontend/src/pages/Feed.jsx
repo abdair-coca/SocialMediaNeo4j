@@ -4,6 +4,7 @@ import client from '../api/client.js';
 import PostCard from '../components/PostCard.jsx';
 import CreatePost from '../components/CreatePost.jsx';
 
+
 export default function Feed() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);

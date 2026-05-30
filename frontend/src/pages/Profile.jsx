@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { formatDate } from '../lib/format.js';
+import { formatDate, relativeTime, resolveMediaUrl } from '../lib/format.js';
+import OptionsPosts from '../components/OptionsPosts.jsx';
 
 export default function Profile() {
   const { username } = useParams();
@@ -15,6 +16,36 @@ export default function Profile() {
   const [followerCount, setFollowerCount] = useState(0);
   const [followBusy, setFollowBusy] = useState(false);
   const [isSelf, setIsSelf] = useState(false);
+
+  // Posts del usuario: backend /api/users/:username no los expone,
+  // así que filtramos /api/posts/explore por autor (limitado por LIMIT 50 del endpoint).
+  const [posts, setPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [postsError, setPostsError] = useState(null);
+
+  const fetchUserPosts = useCallback(async () => {
+    setPostsLoading(true);
+    setPostsError(null);
+    try {
+      const { data } = await client.get('/api/posts/explore');
+      if (data?.success) {
+        const own = (data.data.posts || [])
+          .filter((p) => p.author === username)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setPosts(own);
+      } else {
+        setPostsError(data?.message || 'No se pudieron cargar los posts');
+      }
+    } catch (err) {
+      setPostsError(err.response?.data?.message || err.message || 'Error de red');
+    } finally {
+      setPostsLoading(false);
+    }
+  }, [username]);
+
+  useEffect(() => {
+    fetchUserPosts();
+  }, [fetchUserPosts]);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
@@ -89,6 +120,20 @@ export default function Profile() {
 
   const { user, stats } = profile;
 
+  function handleDeletePost(postId) {
+    setPosts(prev =>
+      prev.filter(post => post.id !== postId)
+    );
+
+    setProfile(prev => ({
+      ...prev,
+      stats: {
+        ...prev.stats,
+        postCount: prev.stats.postCount - 1
+      }
+    }));
+  }
+
   return (
     <div>
       {/* Header del perfil */}
@@ -150,16 +195,104 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Espacio para futura lista de posts del usuario */}
-      <div className="neo-card p-6 text-center">
-        <h3 className="text-lg font-bold mb-1">Posts de @{user.username}</h3>
-        <p className="text-sm text-neo-muted">
-          La línea de tiempo del usuario aparecerá acá próximamente.
-        </p>
-      </div>
+      {/* Posts del usuario */}
+      <section aria-label={`Posts de @${user.username}`}>
+        <h2 className="text-xl font-bold mb-4 px-1">
+          Posts de @{user.username}
+        </h2>
+
+        {postsLoading && (
+          <div className="neo-card p-6 text-center text-neo-muted">Cargando…</div>
+        )}
+
+        {postsError && (
+          <div className="neo-card p-6 text-center border border-neo-accent/40">
+            <p className="text-sm text-neo-accent mb-3">{postsError}</p>
+            <button onClick={fetchUserPosts} className="neo-btn-primary">
+              Reintentar
+            </button>
+          </div>
+        )}
+
+        {!postsLoading && !postsError && posts.length === 0 && (
+          <div className="neo-card p-8 text-center">
+            <p className="text-neo-muted">
+              @{user.username} no ha publicado nada todavía.
+            </p>
+          </div>
+        )}
+
+        {!postsLoading && !postsError && posts.length > 0 && (
+          <div className="space-y-4">
+            {posts.map((p) => (
+              <SimplePostCard
+                key={p.id}
+                post={p}
+                onDelete={handleDeletePost}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
+
+// Tarjeta simple read-only: contenido + imagen + fecha + contador de likes
+function SimplePostCard({ post, onDelete }) {
+  const { user } = useAuth();
+  const imageUrl = resolveMediaUrl(post.imageUrl);
+
+  return (
+    <article className="neo-card overflow-hidden">
+      {/* Header */}
+      <div className="flex justify-end p-3">
+        <OptionsPosts user={user} post={post} onDelete={onDelete} />
+      </div>
+      {imageUrl && (
+        <div className="bg-black">
+          <img
+            src={imageUrl}
+            alt=""
+            className="w-full max-h-[480px] object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
+      <div className="px-5 py-4">
+        {post.content && (
+          <p className="whitespace-pre-wrap leading-relaxed text-white/95">
+            {post.content}
+          </p>
+        )}
+        <div className="flex items-center justify-between mt-3 text-sm text-neo-muted">
+          <time dateTime={post.createdAt} title={formatDate(post.createdAt)}>
+            {relativeTime(post.createdAt)}
+          </time>
+          <span className="inline-flex items-center gap-1.5 text-neo-accent">
+            <HeartIcon className="w-4 h-4" />
+            <span className="tabular-nums font-semibold">{post.likes ?? 0}</span>
+          </span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+const HeartIcon = ({ className }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+);
 
 function Stat({ label, value }) {
   return (
