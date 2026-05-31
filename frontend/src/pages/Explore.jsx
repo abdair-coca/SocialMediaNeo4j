@@ -86,6 +86,14 @@ function ExploreFeed() {
     fetchExplore();
   }, [fetchExplore]);
 
+  const handleDelete = useCallback((id) => {
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const handleEdit = useCallback((updated) => {
+    setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+  }, []);
+
   if (loading) {
     return (
       <div className="neo-card p-8 text-center text-neo-muted">Cargando…</div>
@@ -110,7 +118,12 @@ function ExploreFeed() {
   return (
     <div>
       {posts.map((p) => (
-        <PostCard key={p.id} post={p} />
+        <PostCard
+          key={p.id}
+          post={p}
+          onDelete={handleDelete}
+          onEdit={handleEdit}
+        />
       ))}
     </div>
   );

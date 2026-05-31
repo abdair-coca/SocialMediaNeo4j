@@ -66,8 +66,8 @@ function ContentWithHashtags({ text }) {
   return <p className="whitespace-pre-wrap leading-relaxed">{parts}</p>;
 }
 
-export default function PostCard({ post, onChange }) {
-  const { isAuthenticated } = useAuth();
+export default function PostCard({ post, onChange, onDelete, onEdit }) {
+  const { user, isAuthenticated } = useAuth();
   const [likes, setLikes] = useState(post.likes ?? 0);
   const [likedByMe, setLikedByMe] = useState(Boolean(post.likedByMe));
   const [liking, setLiking] = useState(false);
@@ -103,11 +103,6 @@ export default function PostCard({ post, onChange }) {
     }
   }
 
-  function handleDelete() {
-  
-  }
-  const { user } = useAuth();
-
   return (
     <article className="neo-card overflow-hidden mb-6">
       {/* Header */}
@@ -134,7 +129,7 @@ export default function PostCard({ post, onChange }) {
           </Link>
           <p className="text-xs text-neo-muted">{relativeTime(post.createdAt)}</p>
         </div>
-        <OptionsPosts user={user} post={post} onDelete={handleDelete} />
+        <OptionsPosts user={user} post={post} onDelete={onDelete} onEdit={onEdit} />
       </header>
 
       {/* Imagen (opcional) */}
@@ -186,6 +181,7 @@ export default function PostCard({ post, onChange }) {
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <HeartIcon filled={likedByMe} className="w-5 h-5" />
+          
           <span className="text-sm font-semibold tabular-nums">{likes}</span>
         </button>
 

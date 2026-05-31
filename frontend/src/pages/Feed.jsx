@@ -32,6 +32,14 @@ export default function Feed() {
     fetchFeed();
   }, [fetchFeed]);
 
+  const handleDelete = useCallback((id) => {
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const handleEdit = useCallback((updated) => {
+    setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+  }, []);
+
   return (
     <div>
       <header className="flex items-center justify-between mb-6">
@@ -69,7 +77,12 @@ export default function Feed() {
       {posts.length > 0 && (
         <div>
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard
+              key={post.id}
+              post={post}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+            />
           ))}
         </div>
       )}

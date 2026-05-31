@@ -40,6 +40,14 @@ export default function HashtagFeed() {
     fetchPosts();
   }, [fetchPosts]);
 
+  const handleDelete = useCallback((id) => {
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const handleEdit = useCallback((updated) => {
+    setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+  }, []);
+
   return (
     <div>
       <header className="mb-6">
@@ -81,7 +89,12 @@ export default function HashtagFeed() {
       {posts.length > 0 && (
         <div>
           {posts.map((p) => (
-            <PostCard key={p.id} post={p} />
+            <PostCard
+              key={p.id}
+              post={p}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+            />
           ))}
         </div>
       )}

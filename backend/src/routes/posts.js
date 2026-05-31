@@ -279,6 +279,72 @@ router.post('/:id/comment', requireAuth, async (req, res) => {
   }
 });
 
+router.put('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const content = (req.body?.content ?? '').toString().trim();
+    if (!content) {
+      return res.status(400).json({ success: false, message: 'El contenido no puede estar vacío' });
+    }
+
+    const owner = await runQuery(
+      'MATCH (u:User)-[:PUBLISHED]->(p:Post {id: $id}) RETURN u.id as ownerId',
+      { id }
+    );
+    if (owner.length === 0) {
+      return res.status(404).json({ success: false, message: 'Post no encontrado' });
+    }
+    if (owner[0].get('ownerId') !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'No puedes editar posts ajenos' });
+    }
+
+    // Actualiza el content y elimina los HAS_HASHTAG previos en una sola sesión
+    await runQuery(
+      `MATCH (p:Post {id: $id})
+       SET p.content = $content
+       WITH p
+       OPTIONAL MATCH (p)-[r:HAS_HASHTAG]->()
+       DELETE r`,
+      { id, content }
+    );
+
+    // Re-extrae hashtags del nuevo contenido y crea las relaciones
+    const hashtags = extractHashtags(content);
+    for (const tag of hashtags) {
+      await runQuery(
+        `MATCH (p:Post {id: $postId})
+         MERGE (h:Hashtag {name: $tag})
+         MERGE (p)-[:HAS_HASHTAG]->(h)`,
+        { postId: id, tag }
+      );
+    }
+
+    // Devuelve el post en el mismo shape que /feed para que el frontend lo reemplace en su estado
+    const records = await runQuery(
+      `MATCH (u:User)-[:PUBLISHED]->(p:Post {id: $id})
+       OPTIONAL MATCH (p)<-[:LIKED]-(liker:User)
+       OPTIONAL MATCH (p)<-[:COMMENTED]-(commenter:User)
+       OPTIONAL MATCH (p)-[:HAS_HASHTAG]->(h:Hashtag)
+       WITH p, u,
+            collect(DISTINCT h.name) as hashtags,
+            count(DISTINCT liker) as likes,
+            count(DISTINCT commenter) as comments
+       OPTIONAL MATCH (p)<-[myLike:LIKED]-(me:User {id: $userId})
+       RETURN p,
+              u.username as author,
+              u.avatarUrl as authorAvatar,
+              hashtags, likes, comments,
+              myLike IS NOT NULL as likedByMe`,
+      { id, userId: req.user.id }
+    );
+
+    res.json({ success: true, data: { post: serializePost(records[0]) } });
+  } catch (err) {
+    console.error('PUT /:id error', err);
+    res.status(500).json({ success: false, message: 'Error editando post' });
+  }
+});
+
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;

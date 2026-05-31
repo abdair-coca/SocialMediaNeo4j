@@ -1,58 +1,271 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import client from '../api/client.js';
 import ConfirmModal from './ConfirmModal.jsx';
+import EditPostModal from './EditPostModal.jsx';
 
-export default function OptionsPosts({ user, post, onDelete, titleModal, messageModal, confirmText, cancelText }) {
+// ---- Iconos inline (sin dependencias) ----
+const DotsIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...p}>
+    <circle cx="12" cy="5" r="1.6" />
+    <circle cx="12" cy="12" r="1.6" />
+    <circle cx="12" cy="19" r="1.6" />
+  </svg>
+);
+const EditIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+  </svg>
+);
+const TrashIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>
+    <polyline points="3 6 5 6 21 6" />
+    <path d="m19 6-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" />
+    <path d="M10 11v6M14 11v6" />
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+  </svg>
+);
+const LinkIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+const CopyIcon = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>
+    <rect x="9" y="9" width="13" height="13" rx="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
 
-    const isOwner = user?.username === post.author;
+export default function OptionsPosts({
+  user,
+  post,
+  onDelete,
+  onEdit,
+  titleModal,
+  messageModal,
+  confirmText,
+  cancelText,
+}) {
+  const isOwner = Boolean(user && user.username === post?.author);
 
-    const [showMenu, setShowMenu] = useState(false);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    async function handleDelete() {
-        try {
-            const { data } = await client.delete(`/api/posts/${post.id}`);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+  const [copiedKey, setCopiedKey] = useState(null);
 
-            if (data.success) {
-                onDelete(post.id);
-                setShowDeleteModal(false);
-                setShowMenu(false);
-            }
-        } catch (error) {
-            console.error(error);
-        }
+  const wrapperRef = useRef(null);
+  const buttonRef = useRef(null);
+
+  // Cerrar al clickear fuera o presionar Escape
+  useEffect(() => {
+    if (!showMenu) return;
+    function onMouseDown(e) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
     }
-    return (
-        <div className="relative">
-            <button
-                onClick={() => {setShowMenu(!showMenu); console.log(user?.username, post.author)}}
-                className="p-2 rounded-full hover:bg-white/10 transition"
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        setShowMenu(false);
+        buttonRef.current?.focus();
+      }
+    }
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [showMenu]);
+
+  async function handleDelete() {
+    if (deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const { data } = await client.delete(`/api/posts/${post.id}`);
+      if (data?.success) {
+        onDelete?.(post.id);
+        setShowDeleteModal(false);
+        setShowMenu(false);
+      } else {
+        setDeleteError(data?.message || 'No se pudo eliminar');
+      }
+    } catch (err) {
+      setDeleteError(err.response?.data?.message || err.message || 'Error al eliminar');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function handleEdited(updated) {
+    onEdit?.(updated);
+    setShowEditModal(false);
+  }
+
+  async function copyToClipboard(text, key) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback navegadores antiguos
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 1200);
+      setTimeout(() => setShowMenu(false), 900);
+    } catch {
+      window.prompt('Copiá manualmente:', text);
+    }
+  }
+
+  function handleCopyLink() {
+    const url = `${window.location.origin}/profile/${post.author}`;
+    copyToClipboard(url, 'link');
+  }
+  function handleCopyContent() {
+    copyToClipboard(post.content || '', 'content');
+  }
+
+  // No mostrar el botón si no hay nada útil para ofrecer (post sin autor, etc.)
+  if (!post?.id || !post?.author) return null;
+
+  return (
+    <div className="relative ml-auto" ref={wrapperRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setShowMenu((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={showMenu}
+        aria-label="Opciones del post"
+        className="p-2 rounded-full text-white/70 hover:bg-neo-bg hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-neo-accent/40"
+      >
+        <DotsIcon className="w-5 h-5" />
+      </button>
+
+      {showMenu && (
+        <div
+          role="menu"
+          aria-label="Acciones del post"
+          className="absolute right-0 top-full mt-2 w-56 bg-neo-card border border-neo-border rounded-xl shadow-neo overflow-hidden z-30 py-1"
+        >
+          {isOwner ? (
+            <>
+              <MenuItem
+                icon={<EditIcon className="w-4 h-4" />}
+                onClick={() => {
+                  setShowEditModal(true);
+                  setShowMenu(false);
+                }}
+              >
+                Editar
+              </MenuItem>
+              <MenuItem
+                icon={<TrashIcon className="w-4 h-4" />}
+                danger
+                onClick={() => {
+                  setDeleteError(null);
+                  setShowDeleteModal(true);
+                  setShowMenu(false);
+                }}
+              >
+                Eliminar
+              </MenuItem>
+              <Divider />
+            </>
+          ) : null}
+
+          <MenuItem
+            icon={<LinkIcon className="w-4 h-4" />}
+            onClick={handleCopyLink}
+            copied={copiedKey === 'link'}
+          >
+            {copiedKey === 'link' ? '¡Copiado!' : 'Copiar enlace al perfil'}
+          </MenuItem>
+
+          {post.content && (
+            <MenuItem
+              icon={<CopyIcon className="w-4 h-4" />}
+              onClick={handleCopyContent}
+              copied={copiedKey === 'content'}
             >
-                ⋮
-            </button>
-            {showMenu && (
-                <div className="absolute right-0 top-full mt-2 bg-zinc-900 border border-zinc-700 rounded-lg shadow-lg min-w-[150px]">
-                    {isOwner && (
-                        <button
-                            onClick={() => setShowDeleteModal(true)}
-                            className="w-full text-left px-4 py-2 hover:bg-zinc-800 text-red-500"
-                        >
-                            Eliminar
-                        </button>
-                    )}
-                </div>
-            )}
-            {showDeleteModal && (
-                        <ConfirmModal
-                            open={showDeleteModal}
-                            title={titleModal || "Eliminar post"}
-                            message={messageModal || "¿Estás seguro de que quieres eliminar este post?"}
-                            confirmText={confirmText || "Eliminar"}
-                            cancelText={cancelText || "Cancelar"}
-                            onConfirm={handleDelete}
-                            onCancel={() => setShowDeleteModal(false)}
-                            danger
-                        />
-                    )}
+              {copiedKey === 'content' ? '¡Copiado!' : 'Copiar texto del post'}
+            </MenuItem>
+          )}
+
+          {!isOwner && (
+            <>
+              <Divider />
+              <div className="px-4 py-2 text-xs text-neo-muted">
+                Solo el autor puede editar o eliminar este post.
+              </div>
+            </>
+          )}
         </div>
-    );
+      )}
+
+      <ConfirmModal
+        open={showDeleteModal}
+        title={titleModal || 'Eliminar post'}
+        message={
+          deleteError ||
+          messageModal ||
+          '¿Seguro que querés eliminar este post? Esta acción no se puede deshacer.'
+        }
+        confirmText={deleting ? 'Eliminando…' : confirmText || 'Eliminar'}
+        cancelText={cancelText || 'Cancelar'}
+        onConfirm={handleDelete}
+        onCancel={() => {
+          if (!deleting) {
+            setShowDeleteModal(false);
+            setDeleteError(null);
+          }
+        }}
+        danger
+      />
+
+      <EditPostModal
+        open={showEditModal}
+        post={post}
+        onSaved={handleEdited}
+        onClose={() => setShowEditModal(false)}
+      />
+    </div>
+  );
+}
+
+function MenuItem({ icon, children, onClick, danger = false, copied = false }) {
+  return (
+    <button
+      role="menuitem"
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left px-4 py-2 flex items-center gap-3 text-sm font-medium transition-colors focus:outline-none ${
+        danger
+          ? 'text-neo-accent hover:bg-neo-accent/10 focus:bg-neo-accent/10'
+          : copied
+          ? 'text-neo-accent bg-neo-accent/5'
+          : 'text-white/90 hover:bg-neo-bg focus:bg-neo-bg'
+      }`}
+    >
+      <span className="shrink-0">{icon}</span>
+      <span className="truncate">{children}</span>
+    </button>
+  );
+}
+
+function Divider() {
+  return <div className="h-px bg-neo-border my-1" aria-hidden="true" />;
 }

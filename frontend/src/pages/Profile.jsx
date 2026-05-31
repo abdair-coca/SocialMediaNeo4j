@@ -121,17 +121,20 @@ export default function Profile() {
   const { user, stats } = profile;
 
   function handleDeletePost(postId) {
-    setPosts(prev =>
-      prev.filter(post => post.id !== postId)
-    );
-
+    setPosts(prev => prev.filter(post => post.id !== postId));
     setProfile(prev => ({
       ...prev,
       stats: {
         ...prev.stats,
-        postCount: prev.stats.postCount - 1
-      }
+        postCount: Math.max(0, prev.stats.postCount - 1),
+      },
     }));
+  }
+
+  function handleEditPost(updated) {
+    setPosts(prev =>
+      prev.map(p => (p.id === updated.id ? { ...p, ...updated } : p))
+    );
   }
 
   return (
@@ -229,6 +232,7 @@ export default function Profile() {
                 key={p.id}
                 post={p}
                 onDelete={handleDeletePost}
+                onEdit={handleEditPost}
               />
             ))}
           </div>
@@ -238,16 +242,49 @@ export default function Profile() {
   );
 }
 
-// Tarjeta simple read-only: contenido + imagen + fecha + contador de likes
-function SimplePostCard({ post, onDelete }) {
-  const { user } = useAuth();
+// Tarjeta simple: contenido + imagen + fecha + botón de like funcional
+function SimplePostCard({ post, onDelete, onEdit }) {
+  const { user, isAuthenticated } = useAuth();
   const imageUrl = resolveMediaUrl(post.imageUrl);
+  const [likedByMe, setLikedByMe] = useState(Boolean(post.likedByMe));
+  const [likes, setLikes] = useState(post.likes ?? 0);
+  const [liking, setLiking] = useState(false);
+
+  async function toggleLike() {
+    if (!isAuthenticated || liking) return;
+    // Update optimista
+    const prevLiked = likedByMe;
+    const prevLikes = likes;
+    setLikedByMe(!prevLiked);
+    setLikes(prevLikes + (prevLiked ? -1 : 1));
+    setLiking(true);
+    try {
+      const { data } = await client.post(`/api/posts/${post.id}/like`);
+      if (data?.success) {
+        setLikedByMe(Boolean(data.data.liked));
+        setLikes(Number(data.data.likes ?? 0));
+      } else {
+        setLikedByMe(prevLiked);
+        setLikes(prevLikes);
+      }
+    } catch {
+      setLikedByMe(prevLiked);
+      setLikes(prevLikes);
+    } finally {
+      setLiking(false);
+    }
+  }
 
   return (
     <article className="neo-card overflow-hidden">
       {/* Header */}
       <div className="flex justify-end p-3">
-        <OptionsPosts user={user} post={post} onDelete={onDelete} />
+        <OptionsPosts
+          user={user}
+          post={post}
+          onDelete={onDelete}
+          onEdit={onEdit}
+        />
       </div>
       {imageUrl && (
         <div className="bg-black">
@@ -265,25 +302,41 @@ function SimplePostCard({ post, onDelete }) {
             {post.content}
           </p>
         )}
-        <div className="flex items-center justify-between mt-3 text-sm text-neo-muted">
-          <time dateTime={post.createdAt} title={formatDate(post.createdAt)}>
+        <div className="flex items-center justify-between mt-3">
+          <time
+            dateTime={post.createdAt}
+            title={formatDate(post.createdAt)}
+            className="text-sm text-neo-muted"
+          >
             {relativeTime(post.createdAt)}
           </time>
-          <span className="inline-flex items-center gap-1.5 text-neo-accent">
-            <HeartIcon className="w-4 h-4" />
-            <span className="tabular-nums font-semibold">{post.likes ?? 0}</span>
-          </span>
+          <button
+            type="button"
+            onClick={toggleLike}
+            disabled={!isAuthenticated || liking}
+            aria-pressed={likedByMe}
+            aria-label={likedByMe ? 'Quitar like' : 'Dar like'}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${
+              likedByMe
+                ? 'text-neo-accent bg-neo-accent/10'
+                : 'text-white/80 hover:bg-neo-card hover:text-neo-accent'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            <HeartIcon filled={likedByMe} className="w-5 h-5" />
+            <span className="tabular-nums font-semibold text-sm">{likes}</span>
+          </button>
         </div>
       </div>
     </article>
   );
 }
 
-const HeartIcon = ({ className }) => (
+
+const HeartIcon = ({ filled, className }) => (
   <svg
     className={className}
     viewBox="0 0 24 24"
-    fill="currentColor"
+    fill={filled ? 'currentColor' : 'none'}
     stroke="currentColor"
     strokeWidth="2"
     strokeLinecap="round"
