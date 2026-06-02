@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import client from '../api/client.js';
 import PostCard from '../components/PostCard.jsx';
 import CreatePost from '../components/CreatePost.jsx';
-
+import TitiMascot from '../components/TitiMascot.jsx';
 
 export default function Feed() {
   const [posts, setPosts] = useState([]);
@@ -15,27 +15,20 @@ export default function Feed() {
     setError(null);
     try {
       const { data } = await client.get('/api/posts/feed');
-      if (data?.success) {
-        setPosts(data.data.posts || []);
-      } else {
-        setError(data?.message || 'No se pudo cargar el feed');
-      }
+      if (data?.success) setPosts(data.data.posts || []);
+      else setError(data?.message || 'No se pudo cargar el feed');
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Error de red';
-      setError(msg);
+      setError(err.response?.data?.message || err.message || 'Error de red');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchFeed();
-  }, [fetchFeed]);
+  useEffect(() => { fetchFeed(); }, [fetchFeed]);
 
   const handleDelete = useCallback((id) => {
     setPosts((prev) => prev.filter((p) => p.id !== id));
   }, []);
-
   const handleEdit = useCallback((updated) => {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
   }, []);
@@ -44,36 +37,33 @@ export default function Feed() {
     <div>
       <header className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-extrabold">Feed</h1>
-          <p className="text-sm text-neo-muted">Posts de las personas que seguís</p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-titi-text">Inicio</h1>
+          <p className="text-sm text-titi-muted font-semibold">Lo que está pasando con quienes seguís</p>
         </div>
         <button
           type="button"
           onClick={fetchFeed}
           disabled={loading}
-          className="neo-btn-ghost text-sm disabled:opacity-50"
+          className="titi-btn-ghost text-sm disabled:opacity-50"
         >
           {loading ? 'Actualizando…' : 'Refrescar'}
         </button>
       </header>
 
-      {/* Composer */}
       <CreatePost onCreated={fetchFeed} />
 
-      {/* Estados */}
       {loading && posts.length === 0 && <FeedSkeleton />}
 
       {error && (
-        <div className="neo-card p-6 text-center border border-neo-accent/40">
-          <p className="text-neo-accent font-semibold mb-2">Error</p>
-          <p className="text-sm text-neo-muted mb-4">{error}</p>
-          <button onClick={fetchFeed} className="neo-btn-primary">Reintentar</button>
+        <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
+          <p className="text-titi-red font-extrabold mb-2">¡Ups!</p>
+          <p className="text-sm text-titi-muted mb-4">{error}</p>
+          <button onClick={fetchFeed} className="titi-btn-primary">Reintentar</button>
         </div>
       )}
 
       {!loading && !error && posts.length === 0 && <EmptyFeed />}
 
-      {/* Lista de posts */}
       {posts.length > 0 && (
         <div>
           {posts.map((post) => (
@@ -94,18 +84,18 @@ function FeedSkeleton() {
   return (
     <div className="space-y-6">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="neo-card p-5 animate-pulse">
+        <div key={i} className="bg-white rounded-2xl border border-titi-border p-5 animate-pulse shadow-titi">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-neo-border" />
+            <div className="w-11 h-11 rounded-full bg-titi-border" />
             <div className="space-y-2">
-              <div className="h-3 w-24 bg-neo-border rounded" />
-              <div className="h-2 w-16 bg-neo-border rounded" />
+              <div className="h-3 w-24 bg-titi-border rounded" />
+              <div className="h-2 w-16 bg-titi-border rounded" />
             </div>
           </div>
           <div className="space-y-2">
-            <div className="h-3 w-full bg-neo-border rounded" />
-            <div className="h-3 w-4/5 bg-neo-border rounded" />
-            <div className="h-3 w-3/5 bg-neo-border rounded" />
+            <div className="h-3 w-full bg-titi-border rounded" />
+            <div className="h-3 w-4/5 bg-titi-border rounded" />
+            <div className="h-3 w-3/5 bg-titi-border rounded" />
           </div>
         </div>
       ))}
@@ -115,13 +105,20 @@ function FeedSkeleton() {
 
 function EmptyFeed() {
   return (
-    <div className="neo-card p-8 text-center">
-      <h2 className="text-xl font-bold mb-2">Tu feed está vacío</h2>
-      <p className="text-neo-muted mb-6">
-        Empezá a seguir gente para ver sus posts acá. Mientras tanto, mirá lo que se está
-        publicando en toda la red.
+    <div className="titi-card p-10 text-center">
+      <div className="mb-6">
+        <TitiMascot
+          mood="motivating"
+          message="¡Sigue a alguien para ver su contenido!"
+          size="lg"
+        />
+      </div>
+      <h2 className="text-2xl font-extrabold mb-2">Tu inicio está vacío</h2>
+      <p className="text-titi-muted mb-6 max-w-md mx-auto">
+        Cuando sigas a otras personas, sus publicaciones aparecerán acá. Mientras tanto,
+        descubrí qué se está compartiendo en Titi.
       </p>
-      <Link to="/explore" className="neo-btn-primary">Ir a Explorar</Link>
+      <Link to="/explore" className="titi-btn-primary">Ir a Explorar</Link>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { resolveMediaUrl, relativeTime } from '../lib/format.js';
 import CommentSection from './CommentSection.jsx';
 import OptionsPosts from './OptionsPosts.jsx';
 
-// Iconos inline
+// ---- Iconos ----
 const HeartIcon = ({ filled, className }) => (
   <svg
     className={className}
@@ -21,17 +21,17 @@ const HeartIcon = ({ filled, className }) => (
   </svg>
 );
 
-const MusicIcon = ({ className }) => (
+const CommentIcon = ({ className }) => (
   <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
+    className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
   >
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+  </svg>
+);
+
+const MusicIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M9 18V5l12-2v13" />
     <circle cx="6" cy="18" r="3" />
     <circle cx="18" cy="16" r="3" />
@@ -39,39 +39,12 @@ const MusicIcon = ({ className }) => (
 );
 
 const PinIcon = ({ className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
     <circle cx="12" cy="10" r="3" />
   </svg>
 );
 
-const CommentIcon = ({ className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-  </svg>
-);
-
-/**
- * Render del content destacando hashtags como spans rojos.
- * Los hashtags se identifican con el regex /#(\w+)/g.
- */
 function ContentWithHashtags({ text }) {
   if (!text) return null;
   const parts = [];
@@ -80,23 +53,17 @@ function ContentWithHashtags({ text }) {
   let match;
   let key = 0;
   while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
-    }
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
     const tag = match[1];
     parts.push(
-      <Link
-        key={`h-${key++}`}
-        to={`/hashtag/${tag.toLowerCase()}`}
-        className="text-neo-accent font-medium hover:underline"
-      >
+      <Link key={`h-${key++}`} to={`/hashtag/${tag.toLowerCase()}`} className="text-titi-blue font-bold hover:underline">
         #{tag}
       </Link>
     );
     lastIndex = match.index + match[0].length;
   }
   if (lastIndex < text.length) parts.push(text.slice(lastIndex));
-  return <p className="whitespace-pre-wrap leading-relaxed">{parts}</p>;
+  return <p className="whitespace-pre-wrap leading-relaxed text-titi-text">{parts}</p>;
 }
 
 export default function PostCard({ post, onChange, onDelete, onEdit }) {
@@ -111,7 +78,6 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
 
   async function toggleLike() {
     if (!isAuthenticated || liking) return;
-    // Optimistic update
     const prevLiked = likedByMe;
     const prevLikes = likes;
     setLikedByMe(!prevLiked);
@@ -124,20 +90,17 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
         setLikes(Number(data.data.likes ?? 0));
         onChange?.({ id: post.id, liked: data.data.liked, likes: data.data.likes });
       } else {
-        // Revertimos si el server rechazó
-        setLikedByMe(prevLiked);
-        setLikes(prevLikes);
+        setLikedByMe(prevLiked); setLikes(prevLikes);
       }
     } catch {
-      setLikedByMe(prevLiked);
-      setLikes(prevLikes);
+      setLikedByMe(prevLiked); setLikes(prevLikes);
     } finally {
       setLiking(false);
     }
   }
 
   return (
-    <article className="neo-card overflow-hidden mb-6">
+    <article className="bg-white rounded-2xl shadow-titi border border-titi-border overflow-hidden mb-6 hover:shadow-titi-lg transition-shadow">
       {/* Header */}
       <header className="flex items-center gap-3 px-5 py-4">
         <Link to={`/profile/${post.author}`} className="shrink-0">
@@ -145,74 +108,66 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
             <img
               src={post.authorAvatar}
               alt={post.author}
-              className="w-10 h-10 rounded-full bg-neo-bg border border-neo-border"
+              className="w-11 h-11 rounded-full bg-titi-bg border-2 border-titi-yellow"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-neo-accent/20 text-neo-accent grid place-items-center font-bold">
+            <div className="w-11 h-11 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold border-2 border-titi-yellow">
               {post.author?.[0]?.toUpperCase() ?? '?'}
             </div>
           )}
         </Link>
         <div className="min-w-0">
-          <Link
-            to={`/profile/${post.author}`}
-            className="font-semibold hover:text-neo-accent transition-colors"
-          >
+          <Link to={`/profile/${post.author}`} className="font-extrabold text-titi-text hover:text-titi-blue transition-colors">
             @{post.author}
           </Link>
-          <p className="text-xs text-neo-muted">{relativeTime(post.createdAt)}</p>
+          <p className="text-xs text-titi-muted font-semibold">{relativeTime(post.createdAt)}</p>
         </div>
         <OptionsPosts user={user} post={post} onDelete={onDelete} onEdit={onEdit} />
       </header>
 
-      {/* Imagen (opcional) */}
+      {/* Imagen */}
       {imageUrl && (
-        <div className="bg-black">
-          <img
-            src={imageUrl}
-            alt=""
-            className="w-full max-h-[600px] object-cover"
-            loading="lazy"
-          />
+        <div className="bg-titi-bg">
+          <img src={imageUrl} alt="" className="w-full max-h-[600px] object-cover" loading="lazy" />
         </div>
       )}
 
       {/* Contenido */}
       {post.content && (
-        <div className="px-5 pt-4 text-white/95">
+        <div className="px-5 pt-4">
           <ContentWithHashtags text={post.content} />
         </div>
       )}
 
       {/* Sonido + Ubicación */}
       {(post.sound || post.location) && (
-        <div className="px-5 pt-3 flex flex-wrap gap-3 text-xs text-neo-muted">
+        <div className="px-5 pt-3 flex flex-wrap gap-3 text-xs text-titi-muted">
           {post.sound && (
             <span className="inline-flex items-center gap-1.5 max-w-full">
-              <MusicIcon className="w-3.5 h-3.5 text-neo-accent shrink-0" />
+              <MusicIcon className="w-3.5 h-3.5 text-titi-orange shrink-0" />
               <span className="truncate">
-                <span className="text-white/90 font-medium">{post.sound.name}</span>
+                <span className="text-titi-text font-bold">{post.sound.name}</span>
                 {post.sound.artist && <span> — {post.sound.artist}</span>}
               </span>
             </span>
           )}
           {post.location && (
             <span className="inline-flex items-center gap-1.5">
-              <PinIcon className="w-3.5 h-3.5 text-neo-accent shrink-0" />
-              <span>{post.location.city}, {post.location.country}</span>
+              <PinIcon className="w-3.5 h-3.5 text-titi-green shrink-0" />
+              <span className="font-semibold">{post.location.city}, {post.location.country}</span>
             </span>
           )}
         </div>
       )}
 
-      {/* Hashtags como chips rojos */}
+      {/* Hashtags chips amarillos */}
       {post.hashtags?.length > 0 && (
         <div className="px-5 pt-3 flex flex-wrap gap-2">
           {post.hashtags.map((tag) => (
             <Link
               key={tag}
               to={`/hashtag/${tag.toLowerCase()}`}
-              className="neo-chip hover:bg-neo-accent/20 transition-colors"
+              className="inline-block text-xs font-extrabold text-titi-dark bg-titi-yellow/40 hover:bg-titi-yellow/70 px-3 py-1 rounded-full transition-colors"
             >
               #{tag}
             </Link>
@@ -220,33 +175,32 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
         </div>
       )}
 
-      {/* Acciones */}
-      <footer className="px-5 py-4 mt-2 border-t border-neo-border flex items-center gap-2">
+      {/* Footer acciones */}
+      <footer className="px-5 py-4 mt-2 border-t border-titi-border flex items-center gap-2">
         <button
           type="button"
           onClick={toggleLike}
           disabled={!isAuthenticated || liking}
           aria-pressed={likedByMe}
           aria-label={likedByMe ? 'Quitar like' : 'Dar like'}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-bold transition-all ${
             likedByMe
-              ? 'text-neo-accent bg-neo-accent/10'
-              : 'text-white/80 hover:bg-neo-card hover:text-neo-accent'
+              ? 'text-titi-red bg-titi-red/10 scale-105'
+              : 'text-titi-muted hover:bg-titi-bg hover:text-titi-red'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <HeartIcon filled={likedByMe} className="w-5 h-5" />
-          
-          <span className="text-sm font-semibold tabular-nums">{likes}</span>
+          <span className="text-sm tabular-nums">{likes}</span>
         </button>
 
         <button
           type="button"
           onClick={() => setShowComments((v) => !v)}
           aria-expanded={showComments}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full text-white/80 hover:bg-neo-card hover:text-white transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full font-bold text-titi-muted hover:bg-titi-bg hover:text-titi-blue transition-colors"
         >
           <CommentIcon className="w-5 h-5" />
-          <span className="text-sm font-semibold tabular-nums">{commentCount}</span>
+          <span className="text-sm tabular-nums">{commentCount}</span>
         </button>
       </footer>
 

@@ -3,18 +3,10 @@ import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const MAX_LEN = 500;
-const MAX_BYTES = 5 * 1024 * 1024; // 5 MB (igual al límite del multer en backend)
+const MAX_BYTES = 5 * 1024 * 1024;
 
 const CameraIcon = (p) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...p}
-  >
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
     <circle cx="12" cy="13" r="4" />
   </svg>
@@ -27,9 +19,9 @@ export default function CreatePost({ onCreated }) {
   const [preview, setPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Catálogos del backend para sonido y ubicación
   const [sounds, setSounds] = useState([]);
   const [locations, setLocations] = useState([]);
   const [soundId, setSoundId] = useState('');
@@ -45,29 +37,18 @@ export default function CreatePost({ onCreated }) {
       if (s?.data?.success) setSounds(s.data.data.sounds || []);
       if (l?.data?.success) setLocations(l.data.data.locations || []);
     });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
-  // Limpia el object URL del preview cuando cambia o al desmontar
   useEffect(() => {
-    return () => {
-      if (preview) URL.revokeObjectURL(preview);
-    };
+    return () => { if (preview) URL.revokeObjectURL(preview); };
   }, [preview]);
 
   function handleFile(e) {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (!/^image\//.test(f.type)) {
-      setError('Solo se permiten imágenes (jpeg, png, gif, webp)');
-      return;
-    }
-    if (f.size > MAX_BYTES) {
-      setError('La imagen debe pesar menos de 5MB');
-      return;
-    }
+    if (!/^image\//.test(f.type)) { setError('Solo se permiten imágenes'); return; }
+    if (f.size > MAX_BYTES) { setError('La imagen debe pesar menos de 5MB'); return; }
     setError(null);
     setFile(f);
     setPreview((prev) => {
@@ -78,35 +59,26 @@ export default function CreatePost({ onCreated }) {
 
   function clearFile() {
     setFile(null);
-    setPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
+    setPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     const value = content.trim();
-    if (!value && !file) {
-      setError('El post debe tener contenido o imagen');
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
+    if (!value && !file) { setError('El post debe tener contenido o imagen'); return; }
+    setSubmitting(true); setError(null); setSuccess(false);
     try {
       const fd = new FormData();
       fd.append('content', value);
       if (file) fd.append('image', file);
       if (soundId) fd.append('soundId', soundId);
       if (locationId) fd.append('locationId', locationId);
-      // axios pone automáticamente Content-Type: multipart/form-data con el boundary
       const { data } = await client.post('/api/posts', fd);
       if (data?.success) {
-        setContent('');
-        clearFile();
-        setSoundId('');
-        setLocationId('');
+        setContent(''); clearFile(); setSoundId(''); setLocationId('');
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 2500);
         onCreated?.(data.data);
       } else {
         setError(data?.message || 'Error al publicar');
@@ -121,54 +93,51 @@ export default function CreatePost({ onCreated }) {
   const canSubmit = (content.trim().length > 0 || file) && !submitting;
 
   return (
-    <form onSubmit={handleSubmit} className="neo-card p-5 mb-6" aria-label="Crear post">
+    <form
+      onSubmit={handleSubmit}
+      aria-label="Crear post"
+      className="bg-white rounded-2xl shadow-titi border border-titi-border border-t-4 border-t-titi-yellow p-5 mb-6"
+    >
       <div className="flex gap-3">
         {user?.avatarUrl ? (
           <img
             src={user.avatarUrl}
             alt=""
-            className="hidden sm:block w-10 h-10 rounded-full bg-neo-bg border border-neo-border shrink-0 mt-1"
+            className="hidden sm:block w-11 h-11 rounded-full bg-titi-bg border-2 border-titi-yellow shrink-0 mt-1"
           />
         ) : (
-          <div className="hidden sm:grid w-10 h-10 rounded-full bg-neo-accent/20 text-neo-accent place-items-center font-bold shrink-0 mt-1">
+          <div className="hidden sm:grid w-11 h-11 rounded-full bg-titi-yellow text-titi-dark place-items-center font-extrabold shrink-0 mt-1 border-2 border-titi-yellow">
             {user?.username?.[0]?.toUpperCase() ?? '?'}
           </div>
         )}
 
         <div className="flex-1 min-w-0">
-          <label htmlFor="cp-content" className="sr-only">
-            Contenido del post
-          </label>
+          <label htmlFor="cp-content" className="sr-only">Contenido del post</label>
           <textarea
             id="cp-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder={`¿Qué estás pensando, @${user?.username ?? 'vos'}?`}
+            placeholder={`¿Qué quieres compartir hoy, @${user?.username ?? 'vos'}? 🌟`}
             rows={3}
             maxLength={MAX_LEN}
-            className="neo-input resize-none"
+            className="titi-input resize-none"
             disabled={submitting}
           />
 
           {preview && (
             <div className="relative mt-3 inline-block">
-              <img
-                src={preview}
-                alt="Vista previa"
-                className="max-h-64 rounded-xl border border-neo-border"
-              />
+              <img src={preview} alt="Vista previa" className="max-h-64 rounded-xl border-2 border-titi-yellow" />
               <button
                 type="button"
                 onClick={clearFile}
                 aria-label="Quitar imagen"
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70 hover:bg-neo-accent text-white grid place-items-center transition-colors"
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-titi-dark/80 hover:bg-titi-red text-white grid place-items-center transition-colors font-bold"
               >
                 ×
               </button>
             </div>
           )}
 
-          {/* Sonido + Ubicación (opcionales) */}
           {(sounds.length > 0 || locations.length > 0) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
               {sounds.length > 0 && (
@@ -177,13 +146,11 @@ export default function CreatePost({ onCreated }) {
                   onChange={(e) => setSoundId(e.target.value)}
                   disabled={submitting}
                   aria-label="Elegir sonido"
-                  className="neo-input text-sm"
+                  className="titi-input text-sm"
                 >
                   <option value="">🎵 Sin sonido</option>
                   {sounds.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      🎵 {s.name} — {s.artist}
-                    </option>
+                    <option key={s.id} value={s.id}>🎵 {s.name} — {s.artist}</option>
                   ))}
                 </select>
               )}
@@ -193,13 +160,11 @@ export default function CreatePost({ onCreated }) {
                   onChange={(e) => setLocationId(e.target.value)}
                   disabled={submitting}
                   aria-label="Elegir ubicación"
-                  className="neo-input text-sm"
+                  className="titi-input text-sm"
                 >
                   <option value="">📍 Sin ubicación</option>
                   {locations.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      📍 {l.city}, {l.country}
-                    </option>
+                    <option key={l.id} value={l.id}>📍 {l.city}, {l.country}</option>
                   ))}
                 </select>
               )}
@@ -207,17 +172,16 @@ export default function CreatePost({ onCreated }) {
           )}
 
           {error && (
-            <p className="text-sm text-neo-accent mt-2" role="alert">
-              {error}
+            <p className="text-sm text-titi-red font-bold mt-2" role="alert">{error}</p>
+          )}
+          {success && (
+            <p className="text-sm text-titi-green font-bold mt-2" role="status">
+              ¡Genial! Tu post está en vivo 🚀
             </p>
           )}
 
           <div className="flex items-center justify-between mt-3 gap-3 flex-wrap">
-            <label
-              className={`neo-btn-ghost text-sm cursor-pointer ${
-                submitting ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
+            <label className={`titi-btn-ghost text-sm cursor-pointer ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}>
               <CameraIcon className="w-4 h-4" />
               <span>{file ? 'Cambiar imagen' : 'Agregar imagen'}</span>
               <input
@@ -231,17 +195,13 @@ export default function CreatePost({ onCreated }) {
             </label>
 
             <div className="flex items-center gap-3">
-              <span
-                className={`text-xs tabular-nums ${
-                  content.length >= MAX_LEN ? 'text-neo-accent' : 'text-neo-muted'
-                }`}
-              >
+              <span className={`text-xs tabular-nums font-bold ${content.length >= MAX_LEN ? 'text-titi-red' : 'text-titi-muted'}`}>
                 {content.length}/{MAX_LEN}
               </span>
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="neo-btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="titi-btn-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 {submitting ? 'Publicando…' : 'Publicar'}
               </button>

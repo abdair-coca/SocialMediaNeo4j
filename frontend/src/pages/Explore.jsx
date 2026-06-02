@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../api/client.js';
 import PostCard from '../components/PostCard.jsx';
+import TitiMascot from '../components/TitiMascot.jsx';
 import { relativeTime, resolveMediaUrl } from '../lib/format.js';
 
 export default function Explore() {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
-  // Debounce 300ms para no spamear /api/search en cada tecla
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
     return () => clearTimeout(id);
@@ -17,19 +17,15 @@ export default function Explore() {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-3xl font-extrabold mb-1">Explorar</h1>
-        <p className="text-sm text-neo-muted">
-          Descubrí usuarios, posts y hashtags en NeoSocial
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-titi-text mb-1">Explorar</h1>
+        <p className="text-sm text-titi-muted font-semibold">
+          Descubrí usuarios, posts y hashtags en Titi
         </p>
       </header>
 
       <SearchBar value={query} onChange={setQuery} />
 
-      {debouncedQuery ? (
-        <SearchResults q={debouncedQuery} />
-      ) : (
-        <ExploreFeed />
-      )}
+      {debouncedQuery ? <SearchResults q={debouncedQuery} /> : <ExploreFeed />}
     </div>
   );
 }
@@ -42,17 +38,13 @@ function SearchBar({ value, onChange }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Buscá usuarios, posts o #hashtags…"
-        className="neo-input pl-11"
+        className="titi-input pl-12"
         aria-label="Buscar"
       />
       <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-neo-muted pointer-events-none"
+        viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+        strokeLinecap="round" strokeLinejoin="round"
+        className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-titi-muted pointer-events-none"
       >
         <circle cx="11" cy="11" r="7" />
         <line x1="21" y1="21" x2="16.5" y2="16.5" />
@@ -61,16 +53,13 @@ function SearchBar({ value, onChange }) {
   );
 }
 
-// ---- Feed default cuando no hay query ----
-
 function ExploreFeed() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetchExplore = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const { data } = await client.get('/api/posts/explore');
       if (data?.success) setPosts(data.data.posts || []);
@@ -82,36 +71,31 @@ function ExploreFeed() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchExplore();
-  }, [fetchExplore]);
+  useEffect(() => { fetchExplore(); }, [fetchExplore]);
 
   const handleDelete = useCallback((id) => {
     setPosts((prev) => prev.filter((p) => p.id !== id));
   }, []);
-
   const handleEdit = useCallback((updated) => {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
   }, []);
 
   if (loading) {
-    return (
-      <div className="neo-card p-8 text-center text-neo-muted">Cargando…</div>
-    );
+    return <div className="titi-card p-8 text-center text-titi-muted font-semibold">Cargando…</div>;
   }
   if (error) {
     return (
-      <div className="neo-card p-6 text-center border border-neo-accent/40">
-        <p className="text-neo-accent font-semibold mb-2">Error</p>
-        <p className="text-sm text-neo-muted mb-4">{error}</p>
-        <button onClick={fetchExplore} className="neo-btn-primary">Reintentar</button>
+      <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
+        <p className="text-titi-red font-bold mb-2">Error</p>
+        <p className="text-sm text-titi-muted mb-4">{error}</p>
+        <button onClick={fetchExplore} className="titi-btn-primary">Reintentar</button>
       </div>
     );
   }
   if (posts.length === 0) {
     return (
-      <div className="neo-card p-8 text-center">
-        <p className="text-neo-muted">Todavía no hay posts en la red.</p>
+      <div className="titi-card p-10 text-center">
+        <TitiMascot mood="idle" message="Aún no hay publicaciones, ¡sé el primero!" size="lg" />
       </div>
     );
   }
@@ -129,8 +113,6 @@ function ExploreFeed() {
   );
 }
 
-// ---- Resultados de búsqueda ----
-
 function SearchResults({ q }) {
   const [data, setData] = useState({ users: [], posts: [], hashtags: [] });
   const [loading, setLoading] = useState(true);
@@ -138,10 +120,8 @@ function SearchResults({ q }) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    client
-      .get('/api/search', { params: { q } })
+    setLoading(true); setError(null);
+    client.get('/api/search', { params: { q } })
       .then(({ data }) => {
         if (cancelled) return;
         if (data?.success) {
@@ -158,21 +138,17 @@ function SearchResults({ q }) {
         if (cancelled) return;
         setError(err.response?.data?.message || err.message || 'Error de red');
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [q]);
 
   if (loading) {
-    return <div className="neo-card p-6 text-center text-neo-muted">Buscando "{q}"…</div>;
+    return <div className="titi-card p-6 text-center text-titi-muted font-semibold">Buscando "{q}"…</div>;
   }
   if (error) {
     return (
-      <div className="neo-card p-6 text-center border border-neo-accent/40">
-        <p className="text-sm text-neo-accent">{error}</p>
+      <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
+        <p className="text-sm text-titi-red font-bold">{error}</p>
       </div>
     );
   }
@@ -182,9 +158,10 @@ function SearchResults({ q }) {
 
   if (totalResults === 0) {
     return (
-      <div className="neo-card p-8 text-center">
-        <p className="text-neo-muted">
-          Sin resultados para <span className="text-white font-semibold">"{q}"</span>
+      <div className="titi-card p-10 text-center">
+        <TitiMascot mood="sad" message="No encontré nada... intenta con otro término" size="lg" />
+        <p className="text-titi-muted text-sm mt-4">
+          Sin resultados para <span className="text-titi-text font-extrabold">"{q}"</span>
         </p>
       </div>
     );
@@ -196,15 +173,15 @@ function SearchResults({ q }) {
         <Section title="Hashtags">
           <div className="flex flex-wrap gap-2">
             {hashtags.map((h) => (
-              <button
+              <Link
                 key={h.name}
-                type="button"
-                className="neo-chip text-sm"
+                to={`/hashtag/${h.name}`}
+                className="inline-flex items-center gap-2 text-sm font-extrabold text-titi-dark bg-titi-yellow/40 hover:bg-titi-yellow/70 px-3 py-1.5 rounded-full transition-colors"
                 title={`${h.postCount} post${h.postCount === 1 ? '' : 's'}`}
               >
                 #{h.name}
-                <span className="ml-2 text-neo-muted">{h.postCount}</span>
-              </button>
+                <span className="text-titi-muted text-xs">{h.postCount}</span>
+              </Link>
             ))}
           </div>
         </Section>
@@ -213,9 +190,7 @@ function SearchResults({ q }) {
       {users.length > 0 && (
         <Section title="Usuarios">
           <ul className="space-y-3">
-            {users.map((u) => (
-              <UserResult key={u.id} user={u} />
-            ))}
+            {users.map((u) => <UserResult key={u.id} user={u} />)}
           </ul>
         </Section>
       )}
@@ -223,9 +198,7 @@ function SearchResults({ q }) {
       {posts.length > 0 && (
         <Section title="Posts">
           <ul className="space-y-3">
-            {posts.map((p) => (
-              <PostResult key={p.id} post={p} />
-            ))}
+            {posts.map((p) => <PostResult key={p.id} post={p} />)}
           </ul>
         </Section>
       )}
@@ -235,8 +208,8 @@ function SearchResults({ q }) {
 
 function Section({ title, children }) {
   return (
-    <section className="neo-card p-5">
-      <h3 className="text-xs uppercase tracking-wide text-neo-muted mb-3">{title}</h3>
+    <section className="titi-card p-5">
+      <h3 className="text-xs uppercase tracking-wide text-titi-muted font-extrabold mb-3">{title}</h3>
       {children}
     </section>
   );
@@ -247,24 +220,18 @@ function UserResult({ user }) {
     <li>
       <Link
         to={`/profile/${user.username}`}
-        className="flex items-center gap-3 p-2 rounded-xl hover:bg-neo-bg/60 transition-colors"
+        className="flex items-center gap-3 p-2 rounded-xl hover:bg-titi-bg transition-colors"
       >
         {user.avatarUrl ? (
-          <img
-            src={user.avatarUrl}
-            alt={user.username}
-            className="w-12 h-12 rounded-full bg-neo-bg border border-neo-border"
-          />
+          <img src={user.avatarUrl} alt={user.username} className="w-12 h-12 rounded-full bg-titi-bg border-2 border-titi-yellow" />
         ) : (
-          <div className="w-12 h-12 rounded-full bg-neo-accent/20 text-neo-accent grid place-items-center font-bold">
+          <div className="w-12 h-12 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold border-2 border-titi-yellow">
             {user.username?.[0]?.toUpperCase() ?? '?'}
           </div>
         )}
         <div className="min-w-0">
-          <p className="font-semibold">@{user.username}</p>
-          {user.bio && (
-            <p className="text-sm text-neo-muted truncate">{user.bio}</p>
-          )}
+          <p className="font-extrabold text-titi-text">@{user.username}</p>
+          {user.bio && <p className="text-sm text-titi-muted truncate">{user.bio}</p>}
         </div>
       </Link>
     </li>
@@ -274,29 +241,22 @@ function UserResult({ user }) {
 function PostResult({ post }) {
   const imageUrl = resolveMediaUrl(post.imageUrl);
   return (
-    <li className="flex gap-3 p-2 rounded-xl">
+    <li className="flex gap-3 p-2 rounded-xl hover:bg-titi-bg transition-colors">
       {imageUrl ? (
-        <img
-          src={imageUrl}
-          alt=""
-          className="w-16 h-16 rounded-lg object-cover bg-neo-bg border border-neo-border shrink-0"
-        />
+        <img src={imageUrl} alt="" className="w-16 h-16 rounded-lg object-cover bg-titi-bg border border-titi-border shrink-0" />
       ) : (
-        <div className="w-16 h-16 rounded-lg bg-neo-bg border border-neo-border shrink-0 grid place-items-center text-neo-muted text-xs">
+        <div className="w-16 h-16 rounded-lg bg-titi-yellow/20 border border-titi-border shrink-0 grid place-items-center text-titi-muted text-xs font-bold">
           texto
         </div>
       )}
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <Link
-            to={`/profile/${post.author}`}
-            className="font-semibold text-sm hover:text-neo-accent"
-          >
+          <Link to={`/profile/${post.author}`} className="font-extrabold text-sm text-titi-text hover:text-titi-blue">
             @{post.author}
           </Link>
-          <span className="text-xs text-neo-muted">{relativeTime(post.createdAt)}</span>
+          <span className="text-xs text-titi-muted font-semibold">{relativeTime(post.createdAt)}</span>
         </div>
-        <p className="text-sm text-white/90 line-clamp-2 break-words">{post.content}</p>
+        <p className="text-sm text-titi-text line-clamp-2 break-words">{post.content}</p>
       </div>
     </li>
   );

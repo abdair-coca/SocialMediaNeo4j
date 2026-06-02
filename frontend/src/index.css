@@ -10,53 +10,94 @@
   }
 
   body {
-    @apply bg-neo-bg text-white antialiased;
-    font-family: theme('fontFamily.sans');
+    @apply bg-titi-bg text-titi-text antialiased;
+    font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   }
 
   ::selection {
-    @apply bg-neo-accent text-white;
+    @apply bg-titi-yellow text-titi-dark;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-extrabold tracking-tight;
   }
 }
 
 @layer components {
+  /* ---- Componentes Titi (nueva paleta) ---- */
+  .titi-card {
+    @apply bg-titi-card border border-titi-border rounded-2xl shadow-titi;
+  }
+
+  .titi-btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full font-bold transition-all;
+  }
+
+  .titi-btn-primary {
+    @apply titi-btn bg-titi-yellow text-titi-dark hover:bg-titi-orange hover:-translate-y-0.5 shadow-titi;
+  }
+
+  .titi-btn-secondary {
+    @apply titi-btn bg-titi-blue text-white hover:opacity-90;
+  }
+
+  .titi-btn-ghost {
+    @apply titi-btn bg-titi-card border border-titi-border text-titi-text hover:bg-titi-bg;
+  }
+
+  .titi-btn-danger {
+    @apply titi-btn bg-titi-red text-white hover:opacity-90;
+  }
+
+  .titi-input {
+    @apply w-full bg-titi-card border-2 border-titi-border rounded-xl px-4 py-2.5 text-titi-text placeholder-titi-muted focus:outline-none focus:border-titi-yellow transition-colors font-medium;
+  }
+
+  .titi-chip {
+    @apply inline-block text-xs font-bold text-titi-dark bg-titi-yellow/30 px-3 py-1 rounded-full;
+  }
+
+  /* ---- Aliases legacy neo-* (mismos estilos, usados por componentes no rediseñados) ---- */
   .neo-card {
-    @apply bg-neo-card border border-neo-border rounded-2xl shadow-neo;
+    @apply titi-card;
   }
-
   .neo-btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full font-semibold transition-colors;
+    @apply titi-btn;
   }
-
   .neo-btn-primary {
-    @apply neo-btn bg-neo-accent hover:bg-neo-accentHover text-white;
+    @apply titi-btn-primary;
   }
-
   .neo-btn-ghost {
-    @apply neo-btn bg-transparent border border-neo-border hover:bg-neo-card text-white;
+    @apply titi-btn-ghost;
   }
-
   .neo-input {
-    @apply w-full bg-neo-card border border-neo-border rounded-xl px-4 py-2 text-white placeholder-neo-muted focus:outline-none focus:border-neo-accent transition-colors;
+    @apply titi-input;
   }
-
   .neo-chip {
-    @apply inline-block text-xs font-medium text-neo-accent bg-neo-accent/10 px-2 py-1 rounded-full;
+    @apply titi-chip;
   }
 }
 
-/* Scrollbar oscuro */
+/* Scrollbar amarillo Titi */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #0a0a0a;
+  background: #FFFBF0;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #FFD93D;
   border-radius: 5px;
+  border: 2px solid #FFFBF0;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #FF9A3C;
+}
+
+/* Asegura body con paleta Titi aunque haya clases legacy en index.html */
+body {
+  background-color: #FFFBF0 !important;
+  color: #1A1A2E !important;
+  font-family: 'Nunito', system-ui, sans-serif !important;
 }

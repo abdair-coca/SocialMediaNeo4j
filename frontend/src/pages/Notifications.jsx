@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../api/client.js';
 import { relativeTime } from '../lib/format.js';
+import TitiMascot from '../components/TitiMascot.jsx';
 
 export default function Notifications() {
   const [items, setItems] = useState([]);
@@ -13,11 +14,8 @@ export default function Notifications() {
     setError(null);
     try {
       const { data } = await client.get('/api/notifications');
-      if (data?.success) {
-        setItems(data.data.notifications || []);
-      } else {
-        setError(data?.message || 'No se pudieron cargar');
-      }
+      if (data?.success) setItems(data.data.notifications || []);
+      else setError(data?.message || 'No se pudieron cargar');
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Error de red');
     } finally {
@@ -25,26 +23,18 @@ export default function Notifications() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchNotifs();
-  }, [fetchNotifs]);
+  useEffect(() => { fetchNotifs(); }, [fetchNotifs]);
 
   async function markAllRead() {
     try {
       await client.post('/api/notifications/read-all');
       setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-    } catch {
-      /* swallow */
-    }
+    } catch { /* swallow */ }
   }
 
   async function markOneRead(id) {
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-    try {
-      await client.post(`/api/notifications/${id}/read`);
-    } catch {
-      /* swallow */
-    }
+    try { await client.post(`/api/notifications/${id}/read`); } catch { /* swallow */ }
   }
 
   const hasUnread = items.some((n) => !n.read);
@@ -53,30 +43,33 @@ export default function Notifications() {
     <div>
       <header className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-extrabold">Notificaciones</h1>
-          <p className="text-sm text-neo-muted">Actividad reciente</p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-titi-text">Notificaciones</h1>
+          <p className="text-sm text-titi-muted font-semibold">Lo que pasó mientras no estabas</p>
         </div>
         {hasUnread && (
-          <button onClick={markAllRead} className="neo-btn-ghost text-sm">
+          <button onClick={markAllRead} className="titi-btn-ghost text-sm">
             Marcar todo como leído
           </button>
         )}
       </header>
 
       {loading && (
-        <div className="neo-card p-8 text-center text-neo-muted">Cargando…</div>
+        <div className="titi-card p-8 text-center text-titi-muted font-semibold">Cargando…</div>
       )}
 
       {error && (
-        <div className="neo-card p-6 text-center border border-neo-accent/40">
-          <p className="text-sm text-neo-accent mb-3">{error}</p>
-          <button onClick={fetchNotifs} className="neo-btn-primary">Reintentar</button>
+        <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
+          <p className="text-sm text-titi-red font-bold mb-3">{error}</p>
+          <button onClick={fetchNotifs} className="titi-btn-primary">Reintentar</button>
         </div>
       )}
 
       {!loading && !error && items.length === 0 && (
-        <div className="neo-card p-8 text-center">
-          <p className="text-neo-muted">No tenés notificaciones todavía.</p>
+        <div className="titi-card p-10 text-center">
+          <TitiMascot mood="idle" message="Todo tranquilo por aquí 🐒" size="lg" />
+          <p className="text-titi-muted mt-4 max-w-md mx-auto">
+            Cuando alguien te dé like, te siga o comente tus posts, lo vas a ver acá.
+          </p>
         </div>
       )}
 
@@ -93,15 +86,11 @@ export default function Notifications() {
 
 function NotificationItem({ notif, onClick }) {
   const verb =
-    notif.type === 'like'
-      ? 'le dio like a tu post'
-      : notif.type === 'comment'
-      ? 'comentó tu post'
-      : notif.type === 'follow'
-      ? 'empezó a seguirte'
-      : 'interactuó contigo';
+    notif.type === 'like' ? 'le dio ❤️ a tu post'
+    : notif.type === 'comment' ? 'comentó tu post'
+    : notif.type === 'follow' ? 'empezó a seguirte'
+    : 'interactuó contigo';
 
-  // Destino del click
   const linkTo = notif.user
     ? `/profile/${notif.user.username}`
     : notif.actor
@@ -113,40 +102,37 @@ function NotificationItem({ notif, onClick }) {
       <Link
         to={linkTo}
         onClick={onClick}
-        className={`flex items-start gap-3 p-4 rounded-xl border transition-colors ${
+        className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all ${
           notif.read
-            ? 'bg-neo-card/60 border-neo-border hover:bg-neo-card'
-            : 'bg-neo-accent/10 border-neo-accent/30 hover:bg-neo-accent/20'
+            ? 'bg-white border-titi-border hover:border-titi-yellow'
+            : 'bg-titi-yellow/10 border-titi-yellow hover:bg-titi-yellow/20'
         }`}
       >
         {notif.actor?.avatarUrl ? (
           <img
             src={notif.actor.avatarUrl}
             alt=""
-            className="w-10 h-10 rounded-full bg-neo-bg border border-neo-border shrink-0"
+            className="w-11 h-11 rounded-full bg-titi-bg border-2 border-titi-yellow shrink-0"
           />
         ) : (
-          <div className="w-10 h-10 rounded-full bg-neo-accent/20 text-neo-accent grid place-items-center font-bold shrink-0">
+          <div className="w-11 h-11 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold shrink-0">
             {notif.actor?.username?.[0]?.toUpperCase() ?? '?'}
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-sm">
-            <span className="font-semibold">@{notif.actor?.username ?? 'alguien'}</span>{' '}
-            <span className="text-white/80">{verb}</span>
+          <p className="text-sm text-titi-text">
+            <span className="font-extrabold">@{notif.actor?.username ?? 'alguien'}</span>{' '}
+            <span className="font-semibold text-titi-muted">{verb}</span>
           </p>
           {notif.post?.content && (
-            <p className="text-xs text-neo-muted mt-1 line-clamp-2 break-words">
+            <p className="text-xs text-titi-muted mt-1 line-clamp-2 break-words italic">
               "{notif.post.content}"
             </p>
           )}
-          <p className="text-xs text-neo-muted mt-1">{relativeTime(notif.createdAt)}</p>
+          <p className="text-xs text-titi-muted font-semibold mt-1">{relativeTime(notif.createdAt)}</p>
         </div>
         {!notif.read && (
-          <span
-            aria-label="No leída"
-            className="w-2 h-2 rounded-full bg-neo-accent shrink-0 mt-2"
-          />
+          <span aria-label="No leída" className="w-2.5 h-2.5 rounded-full bg-titi-red shrink-0 mt-2" />
         )}
       </Link>
     </li>

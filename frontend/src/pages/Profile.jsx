@@ -18,15 +18,12 @@ export default function Profile() {
   const [followBusy, setFollowBusy] = useState(false);
   const [isSelf, setIsSelf] = useState(false);
 
-  // Posts del usuario: backend /api/users/:username no los expone,
-  // así que filtramos /api/posts/explore por autor (limitado por LIMIT 50 del endpoint).
   const [posts, setPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [postsError, setPostsError] = useState(null);
 
   const fetchUserPosts = useCallback(async () => {
-    setPostsLoading(true);
-    setPostsError(null);
+    setPostsLoading(true); setPostsError(null);
     try {
       const { data } = await client.get('/api/posts/explore');
       if (data?.success) {
@@ -44,13 +41,10 @@ export default function Profile() {
     }
   }, [username]);
 
-  useEffect(() => {
-    fetchUserPosts();
-  }, [fetchUserPosts]);
+  useEffect(() => { fetchUserPosts(); }, [fetchUserPosts]);
 
   const fetchProfile = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const { data } = await client.get(`/api/users/${username}`);
       if (data?.success) {
@@ -65,24 +59,17 @@ export default function Profile() {
       }
     } catch (err) {
       const status = err.response?.status;
-      const msg =
-        status === 404
-          ? 'Usuario no encontrado'
-          : err.response?.data?.message || err.message || 'Error de red';
-      setError(msg);
+      setError(status === 404 ? 'Usuario no encontrado' : (err.response?.data?.message || err.message || 'Error de red'));
     } finally {
       setLoading(false);
     }
   }, [username]);
 
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
   async function toggleFollow() {
     if (!isAuthenticated || isSelf || followBusy) return;
     const wasFollowing = following;
-    // Optimistic
     setFollowing(!wasFollowing);
     setFollowerCount((c) => c + (wasFollowing ? -1 : 1));
     setFollowBusy(true);
@@ -92,7 +79,6 @@ export default function Profile() {
         : `/api/users/${username}/follow`;
       const { data } = await client.post(url);
       if (!data?.success) {
-        // Revert
         setFollowing(wasFollowing);
         setFollowerCount((c) => c + (wasFollowing ? 1 : -1));
       }
@@ -108,12 +94,10 @@ export default function Profile() {
 
   if (error) {
     return (
-      <div className="neo-card p-8 text-center">
-        <h2 className="text-xl font-bold mb-2 text-neo-accent">Ups…</h2>
-        <p className="text-neo-muted mb-4">{error}</p>
-        <button onClick={fetchProfile} className="neo-btn-primary">
-          Reintentar
-        </button>
+      <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-8 text-center shadow-titi">
+        <h2 className="text-xl font-extrabold mb-2 text-titi-red">¡Ups!</h2>
+        <p className="text-titi-muted mb-4">{error}</p>
+        <button onClick={fetchProfile} className="titi-btn-primary">Reintentar</button>
       </div>
     );
   }
@@ -123,42 +107,37 @@ export default function Profile() {
   const { user, stats } = profile;
 
   function handleDeletePost(postId) {
-    setPosts(prev => prev.filter(post => post.id !== postId));
+    setPosts(prev => prev.filter(p => p.id !== postId));
     setProfile(prev => ({
       ...prev,
-      stats: {
-        ...prev.stats,
-        postCount: Math.max(0, prev.stats.postCount - 1),
-      },
+      stats: { ...prev.stats, postCount: Math.max(0, prev.stats.postCount - 1) },
     }));
   }
 
   function handleEditPost(updated) {
-    setPosts(prev =>
-      prev.map(p => (p.id === updated.id ? { ...p, ...updated } : p))
-    );
+    setPosts(prev => prev.map(p => (p.id === updated.id ? { ...p, ...updated } : p)));
   }
 
   return (
     <div>
       {/* Header del perfil */}
-      <div className="neo-card p-6 mb-6">
+      <div className="titi-card p-6 mb-6 border-t-4 border-t-titi-yellow">
         <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left">
           {user.avatarUrl ? (
             <img
               src={user.avatarUrl}
               alt={user.username}
-              className="w-28 h-28 rounded-full bg-neo-bg border border-neo-border shrink-0"
+              className="w-28 h-28 rounded-full bg-titi-bg border-4 border-titi-yellow shrink-0 shadow-titi"
             />
           ) : (
-            <div className="w-28 h-28 rounded-full bg-neo-accent/20 text-neo-accent grid place-items-center text-4xl font-bold shrink-0">
+            <div className="w-28 h-28 rounded-full bg-titi-yellow text-titi-dark grid place-items-center text-4xl font-extrabold shrink-0 border-4 border-titi-yellow shadow-titi">
               {user.username?.[0]?.toUpperCase() ?? '?'}
             </div>
           )}
 
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
-              <h1 className="text-2xl font-extrabold">@{user.username}</h1>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-text">@{user.username}</h1>
               {!isSelf && isAuthenticated && (
                 <button
                   type="button"
@@ -166,27 +145,27 @@ export default function Profile() {
                   disabled={followBusy}
                   className={
                     following
-                      ? 'neo-btn-ghost text-sm disabled:opacity-50'
-                      : 'neo-btn-primary text-sm disabled:opacity-50'
+                      ? 'titi-btn-ghost text-sm disabled:opacity-50'
+                      : 'titi-btn-primary text-sm disabled:opacity-50'
                   }
                 >
                   {followBusy ? '…' : following ? 'Siguiendo' : 'Seguir'}
                 </button>
               )}
               {isSelf && (
-                <span className="neo-chip">Vos</span>
+                <span className="inline-block text-xs font-extrabold text-titi-dark bg-titi-yellow px-3 py-1 rounded-full">Vos</span>
               )}
             </div>
 
             {user.bio ? (
-              <p className="text-white/90 whitespace-pre-wrap mb-2">{user.bio}</p>
+              <p className="text-titi-text whitespace-pre-wrap mb-2 font-semibold">{user.bio}</p>
             ) : (
-              <p className="text-neo-muted italic mb-2">Sin biografía.</p>
+              <p className="text-titi-muted italic mb-2">Sin biografía.</p>
             )}
 
             {location && (
-              <p className="text-sm text-neo-muted flex items-center gap-1.5 justify-center sm:justify-start mb-1">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-neo-accent" aria-hidden="true">
+              <p className="text-sm text-titi-muted flex items-center gap-1.5 justify-center sm:justify-start mb-1 font-semibold">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-titi-green" aria-hidden="true">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
@@ -195,7 +174,7 @@ export default function Profile() {
             )}
 
             {user.createdAt && (
-              <p className="text-xs text-neo-muted">
+              <p className="text-xs text-titi-muted font-semibold">
                 Se unió el {formatDate(user.createdAt)}
               </p>
             )}
@@ -203,35 +182,33 @@ export default function Profile() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-neo-border">
-          <Stat label="Posts" value={stats.postCount} />
-          <Stat label="Seguidores" value={followerCount} />
-          <Stat label="Seguidos" value={stats.followingCount} />
+        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-titi-border">
+          <Stat label="Posts" value={stats.postCount} color="text-titi-yellow" />
+          <Stat label="Seguidores" value={followerCount} color="text-titi-blue" />
+          <Stat label="Seguidos" value={stats.followingCount} color="text-titi-green" />
         </div>
       </div>
 
       {/* Posts del usuario */}
       <section aria-label={`Posts de @${user.username}`}>
-        <h2 className="text-xl font-bold mb-4 px-1">
+        <h2 className="text-2xl font-extrabold mb-4 px-1 text-titi-text">
           Posts de @{user.username}
         </h2>
 
         {postsLoading && (
-          <div className="neo-card p-6 text-center text-neo-muted">Cargando…</div>
+          <div className="titi-card p-6 text-center text-titi-muted font-semibold">Cargando…</div>
         )}
 
         {postsError && (
-          <div className="neo-card p-6 text-center border border-neo-accent/40">
-            <p className="text-sm text-neo-accent mb-3">{postsError}</p>
-            <button onClick={fetchUserPosts} className="neo-btn-primary">
-              Reintentar
-            </button>
+          <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
+            <p className="text-sm text-titi-red font-bold mb-3">{postsError}</p>
+            <button onClick={fetchUserPosts} className="titi-btn-primary">Reintentar</button>
           </div>
         )}
 
         {!postsLoading && !postsError && posts.length === 0 && (
-          <div className="neo-card p-8 text-center">
-            <p className="text-neo-muted">
+          <div className="titi-card p-8 text-center">
+            <p className="text-titi-muted font-semibold">
               @{user.username} no ha publicado nada todavía.
             </p>
           </div>
@@ -254,7 +231,6 @@ export default function Profile() {
   );
 }
 
-// Tarjeta simple: contenido + imagen + fecha + botón de like funcional
 function SimplePostCard({ post, onDelete, onEdit }) {
   const { user, isAuthenticated } = useAuth();
   const imageUrl = resolveMediaUrl(post.imageUrl);
@@ -264,7 +240,6 @@ function SimplePostCard({ post, onDelete, onEdit }) {
 
   async function toggleLike() {
     if (!isAuthenticated || liking) return;
-    // Update optimista
     const prevLiked = likedByMe;
     const prevLikes = likes;
     setLikedByMe(!prevLiked);
@@ -276,49 +251,34 @@ function SimplePostCard({ post, onDelete, onEdit }) {
         setLikedByMe(Boolean(data.data.liked));
         setLikes(Number(data.data.likes ?? 0));
       } else {
-        setLikedByMe(prevLiked);
-        setLikes(prevLikes);
+        setLikedByMe(prevLiked); setLikes(prevLikes);
       }
     } catch {
-      setLikedByMe(prevLiked);
-      setLikes(prevLikes);
+      setLikedByMe(prevLiked); setLikes(prevLikes);
     } finally {
       setLiking(false);
     }
   }
 
   return (
-    <article className="neo-card overflow-hidden">
-      {/* Header */}
+    <article className="bg-white rounded-2xl shadow-titi border border-titi-border overflow-hidden hover:shadow-titi-lg transition-shadow">
       <div className="flex justify-end p-3">
-        <OptionsPosts
-          user={user}
-          post={post}
-          onDelete={onDelete}
-          onEdit={onEdit}
-        />
+        <OptionsPosts user={user} post={post} onDelete={onDelete} onEdit={onEdit} />
       </div>
       {imageUrl && (
-        <div className="bg-black">
-          <img
-            src={imageUrl}
-            alt=""
-            className="w-full max-h-[480px] object-cover"
-            loading="lazy"
-          />
+        <div className="bg-titi-bg">
+          <img src={imageUrl} alt="" className="w-full max-h-[480px] object-cover" loading="lazy" />
         </div>
       )}
       <div className="px-5 py-4">
         {post.content && (
-          <p className="whitespace-pre-wrap leading-relaxed text-white/95">
-            {post.content}
-          </p>
+          <p className="whitespace-pre-wrap leading-relaxed text-titi-text">{post.content}</p>
         )}
         <div className="flex items-center justify-between mt-3">
           <time
             dateTime={post.createdAt}
             title={formatDate(post.createdAt)}
-            className="text-sm text-neo-muted"
+            className="text-sm text-titi-muted font-semibold"
           >
             {relativeTime(post.createdAt)}
           </time>
@@ -328,21 +288,20 @@ function SimplePostCard({ post, onDelete, onEdit }) {
             disabled={!isAuthenticated || liking}
             aria-pressed={likedByMe}
             aria-label={likedByMe ? 'Quitar like' : 'Dar like'}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold transition-all ${
               likedByMe
-                ? 'text-neo-accent bg-neo-accent/10'
-                : 'text-white/80 hover:bg-neo-card hover:text-neo-accent'
+                ? 'text-titi-red bg-titi-red/10 scale-105'
+                : 'text-titi-muted hover:bg-titi-bg hover:text-titi-red'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <HeartIcon filled={likedByMe} className="w-5 h-5" />
-            <span className="tabular-nums font-semibold text-sm">{likes}</span>
+            <span className="tabular-nums text-sm">{likes}</span>
           </button>
         </div>
       </div>
     </article>
   );
 }
-
 
 const HeartIcon = ({ filled, className }) => (
   <svg
@@ -359,31 +318,31 @@ const HeartIcon = ({ filled, className }) => (
   </svg>
 );
 
-function Stat({ label, value }) {
+function Stat({ label, value, color = 'text-titi-text' }) {
   return (
     <div className="text-center">
-      <p className="text-2xl font-extrabold tabular-nums">{value ?? 0}</p>
-      <p className="text-xs uppercase tracking-wide text-neo-muted">{label}</p>
+      <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${color}`}>{value ?? 0}</p>
+      <p className="text-xs uppercase tracking-wide text-titi-muted font-extrabold">{label}</p>
     </div>
   );
 }
 
 function ProfileSkeleton() {
   return (
-    <div className="neo-card p-6 animate-pulse">
+    <div className="titi-card p-6 animate-pulse">
       <div className="flex gap-6">
-        <div className="w-28 h-28 rounded-full bg-neo-border shrink-0" />
+        <div className="w-28 h-28 rounded-full bg-titi-border shrink-0" />
         <div className="flex-1 space-y-3 pt-3">
-          <div className="h-5 w-40 bg-neo-border rounded" />
-          <div className="h-3 w-3/4 bg-neo-border rounded" />
-          <div className="h-3 w-1/2 bg-neo-border rounded" />
+          <div className="h-5 w-40 bg-titi-border rounded" />
+          <div className="h-3 w-3/4 bg-titi-border rounded" />
+          <div className="h-3 w-1/2 bg-titi-border rounded" />
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-neo-border">
+      <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-titi-border">
         {[0, 1, 2].map((i) => (
           <div key={i} className="space-y-2 text-center">
-            <div className="h-6 w-12 bg-neo-border rounded mx-auto" />
-            <div className="h-2 w-16 bg-neo-border rounded mx-auto" />
+            <div className="h-6 w-12 bg-titi-border rounded mx-auto" />
+            <div className="h-2 w-16 bg-titi-border rounded mx-auto" />
           </div>
         ))}
       </div>
