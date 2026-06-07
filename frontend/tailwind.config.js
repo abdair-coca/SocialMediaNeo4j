@@ -7,6 +7,17 @@ export default {
         // ---- Paleta oficial Titi ----
         titi: {
           yellow: '#FFD93D',
+          'yellow-hover': '#FFC107',
+          'yellow-light': '#FFF3B0',
+          'yellow-dark': '#E6B800',
+          cream: '#FFFBF0',
+          dark: '#1A1A2E',
+          'dark-mid': '#16213E',
+          'dark-deep': '#0F3460',
+          streak: '#FF6B35',
+          achievement: '#A855F7',
+          certificate: '#F59E0B',
+          // legacy
           green: '#6BCB77',
           blue: '#4D96FF',
           red: '#FF6B6B',
@@ -16,7 +27,6 @@ export default {
           border: '#F0E6C8',
           text: '#1A1A2E',
           muted: '#6B7280',
-          dark: '#1A1A2E',
         },
         // Aliases neo-* → mapeados a Titi para que cualquier referencia legacy
         // (componentes que no se rediseñaron explícitamente) tome el nuevo tema.
