@@ -6,6 +6,7 @@ import 'dotenv/config';
 import bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import neo4j from 'neo4j-driver';
+import prisma from './src/prisma.js';
 
 const driver = neo4j.driver(
   process.env.NEO4J_URI,
@@ -256,6 +257,448 @@ async function seed() {
     { targetId: abdairId, actorId: mariaId, nid: randomUUID() }
   );
   console.log('🔔 3 notificaciones de prueba creadas');
+
+  // ============================================================
+  // ====================  POSTGRESQL SEED  =====================
+  // ============================================================
+  try {
+    console.log('\n🐘 Iniciando seed de PostgreSQL...');
+
+    // ---- 1. Limpiar PG en orden seguro (respetando FKs) ----
+    await prisma.comentarioLeccion.deleteMany();
+    await prisma.intento.deleteMany();
+    await prisma.progreso.deleteMany();
+    await prisma.inscripcion.deleteMany();
+    await prisma.logroUsuario.deleteMany();
+    await prisma.certificado.deleteMany();
+    await prisma.material.deleteMany();
+    await prisma.leccion.deleteMany();
+    // Evaluacion ↔ Modulo es 1:1 con FK en Evaluacion → debe borrarse antes
+    await prisma.evaluacion.deleteMany();
+    await prisma.modulo.deleteMany();
+    await prisma.cursoProfesor.deleteMany();
+    await prisma.curso.deleteMany();
+    await prisma.categoria.deleteMany();
+    await prisma.logro.deleteMany();
+    await prisma.usuario.deleteMany();
+    console.log('🗑️  PostgreSQL limpio');
+
+    // ---- 2. Usuarios (espejo del array users[] de Neo4j) ----
+    const pgUsersCfg = [
+      { rol: 'PROFESOR',   racha: 12, verificado: true  }, // abdair         (users[0])
+      { rol: 'PROFESOR',   racha: 7,  verificado: true  }, // maria_potosi   (users[1])
+      { rol: 'PROFESOR',   racha: 3,  verificado: true  }, // dev_carlos     (users[2])
+      { rol: 'ESTUDIANTE', racha: 5,  verificado: false }, // lucia_tech     (users[3])
+      { rol: 'ESTUDIANTE', racha: 0,  verificado: false }, // neo4j_demo     (users[4])
+    ];
+
+    const pgUsers = [];
+    for (let i = 0; i < users.length; i++) {
+      const u = users[i];
+      const cfg = pgUsersCfg[i];
+      const created = await prisma.usuario.create({
+        data: {
+          neoId: u.id,
+          username: u.username,
+          email: u.email,
+          rol: cfg.rol,
+          racha: cfg.racha,
+          verificado: cfg.verificado,
+        },
+      });
+      pgUsers.push(created);
+    }
+    const userByUsername = Object.fromEntries(pgUsers.map((u) => [u.username, u]));
+    console.log(`👥 ${pgUsers.length} usuarios PostgreSQL creados`);
+
+    // ---- 3. Categorías ----
+    const categoriasData = [
+      { nombre: 'Programación',     icono: '💻' },
+      { nombre: 'Diseño UX/UI',     icono: '🎨' },
+      { nombre: 'Matemáticas',      icono: '📐' },
+      { nombre: 'Ciencia de Datos', icono: '📊' },
+      { nombre: 'Idiomas',          icono: '🌍' },
+    ];
+    const categorias = {};
+    for (const c of categoriasData) {
+      categorias[c.nombre] = await prisma.categoria.create({ data: c });
+    }
+    console.log(`📚 ${categoriasData.length} categorías creadas`);
+
+    // ---- 4. Cursos ----
+    const cursosData = [
+      {
+        titulo: 'Desarrollo Web con React',
+        descripcion: 'Aprendé a construir interfaces modernas con React 18. Cubrimos componentes, hooks, manejo de estado y mejores prácticas para apps reales.',
+        creadorUsername: 'abdair',
+        categoria: 'Programación',
+        nivel: 'principiante',
+        publicado: true,
+        portadaUrl: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80',
+      },
+      {
+        titulo: 'Neo4j para Desarrolladores',
+        descripcion: 'Modelá tus datos como un grafo y descubrí el poder de Cypher. Vamos a construir queries de recomendación y feeds sociales paso a paso.',
+        creadorUsername: 'dev_carlos',
+        categoria: 'Programación',
+        nivel: 'intermedio',
+        publicado: true,
+        portadaUrl: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80',
+      },
+      {
+        titulo: 'Diseño de Interfaces Modernas',
+        descripcion: 'Principios de UI/UX aplicados a productos digitales. Desde jerarquía visual hasta sistemas de diseño escalables con Figma.',
+        creadorUsername: 'maria_potosi',
+        categoria: 'Diseño UX/UI',
+        nivel: 'principiante',
+        publicado: true,
+        portadaUrl: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&q=80',
+      },
+      {
+        titulo: 'Machine Learning con Python',
+        descripcion: 'Curso intensivo de ML supervisado y no supervisado. Trabajamos con scikit-learn, pandas y casos de uso reales en producción.',
+        creadorUsername: 'abdair',
+        categoria: 'Ciencia de Datos',
+        nivel: 'avanzado',
+        publicado: true,
+        portadaUrl: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80',
+      },
+      {
+        titulo: 'Álgebra Lineal Aplicada',
+        descripcion: 'La matemática detrás de la inteligencia artificial. Vectores, matrices y transformaciones lineales con ejemplos prácticos en Python.',
+        creadorUsername: 'dev_carlos',
+        categoria: 'Matemáticas',
+        nivel: 'intermedio',
+        publicado: true,
+        portadaUrl: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=800&q=80',
+      },
+      {
+        titulo: 'Inglés para Desarrolladores',
+        descripcion: 'Comunicate con confianza en code reviews, standups y documentación técnica. Vocabulario y frases reales del día a día.',
+        creadorUsername: 'maria_potosi',
+        categoria: 'Idiomas',
+        nivel: 'principiante',
+        publicado: true,
+        portadaUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800&q=80',
+      },
+    ];
+
+    const cursos = [];
+    for (const c of cursosData) {
+      const created = await prisma.curso.create({
+        data: {
+          titulo: c.titulo,
+          descripcion: c.descripcion,
+          nivel: c.nivel,
+          publicado: c.publicado,
+          portadaUrl: c.portadaUrl,
+          categoriaId: categorias[c.categoria].id,
+          creadorId: userByUsername[c.creadorUsername].id,
+        },
+      });
+      cursos.push(created);
+    }
+    console.log(`🎓 ${cursos.length} cursos creados`);
+
+    // ---- 5. Módulos y lecciones (2-3 por curso, 2-3 lecciones por módulo) ----
+    // Estructura: modulosPorCurso[cursoIdx] = [{ titulo, descripcion, lecciones: [...] }]
+    const modulosPorCurso = [
+      // ---- Curso 0: Desarrollo Web con React ----
+      [
+        {
+          titulo: 'Introducción a React',
+          descripcion: 'Qué es React y por qué se volvió el estándar del frontend.',
+          lecciones: [
+            { titulo: '¿Qué es React?', contenido: 'React es una librería de JavaScript creada por Facebook para construir interfaces de usuario. Su modelo declarativo permite describir cómo se ve la UI según el estado, dejando que React se encargue de actualizar el DOM.', videoUrl: 'https://www.youtube.com/embed/BcVaGFXxKWY' },
+            { titulo: 'Configurando el entorno con Vite', contenido: 'Vite es un bundler moderno mucho más rápido que Create React App. En esta lección configuramos un proyecto nuevo con Vite, instalamos dependencias y arrancamos el dev server.', videoUrl: 'https://www.youtube.com/embed/KCrXgy8qtjM' },
+          ],
+        },
+        {
+          titulo: 'Componentes y JSX',
+          descripcion: 'Tu primer componente y la sintaxis JSX.',
+          lecciones: [
+            { titulo: 'Tu primer componente', contenido: 'Un componente de React es una función que devuelve JSX. Aprendemos a crear un componente Saludo, exportarlo y usarlo dentro de otro componente padre.', videoUrl: 'https://www.youtube.com/embed/Tn6-PIqc4UM' },
+            { titulo: 'JSX y props', contenido: 'JSX nos deja escribir HTML dentro de JavaScript. Las props son argumentos que se pasan a los componentes para configurarlos desde afuera, igual que parámetros de función.', videoUrl: 'https://www.youtube.com/embed/7iobxzd_2mA' },
+            { titulo: 'Componentes funcionales vs clase', contenido: 'Históricamente React tuvo componentes de clase, pero hoy los funcionales con hooks son el estándar. Comparamos ambos estilos y vemos cuándo migrar código viejo.', videoUrl: 'https://www.youtube.com/embed/dpTOrNEzPn0' },
+          ],
+        },
+        {
+          titulo: 'Hooks fundamentales',
+          descripcion: 'useState y useEffect en profundidad.',
+          lecciones: [
+            { titulo: 'useState', contenido: 'useState te permite agregar estado local a un componente funcional. Vemos patrones comunes, cómo actualizar estado basado en el valor anterior y errores típicos al guardar objetos.', videoUrl: 'https://www.youtube.com/embed/O6P86uwfdR0' },
+            { titulo: 'useEffect', contenido: 'useEffect ejecuta efectos secundarios como llamadas a APIs, suscripciones o manipulación del DOM. Aprendemos sobre el array de dependencias y la función de cleanup.', videoUrl: 'https://www.youtube.com/embed/j1ZET6Vm0LY' },
+          ],
+        },
+      ],
+      // ---- Curso 1: Neo4j para Desarrolladores ----
+      [
+        {
+          titulo: 'Bases de datos en grafos',
+          descripcion: 'Cuándo usar un grafo y cuándo no.',
+          lecciones: [
+            { titulo: '¿Por qué un grafo?', contenido: 'Las bases relacionales sufren con relaciones profundas como redes sociales o recomendaciones. Un grafo modela esos datos de forma natural y las queries quedan declarativas y rápidas.', videoUrl: 'https://www.youtube.com/embed/GekQqFZm7mA' },
+            { titulo: 'Instalando Neo4j Desktop', contenido: 'Descargamos Neo4j Desktop, creamos una base local y nos conectamos al Browser. También configuramos credenciales para acceder desde Node con neo4j-driver.', videoUrl: 'https://www.youtube.com/embed/8jNPajk2s8k' },
+          ],
+        },
+        {
+          titulo: 'Lenguaje Cypher',
+          descripcion: 'Las queries declarativas de Neo4j.',
+          lecciones: [
+            { titulo: 'MATCH y CREATE', contenido: 'Cypher se lee casi como ASCII art: nodos entre paréntesis y relaciones con flechas. Aprendemos a crear nodos con CREATE y buscarlos con MATCH usando patrones.', videoUrl: 'https://www.youtube.com/embed/rqTGNKwKRm0' },
+            { titulo: 'Relaciones y patrones', contenido: 'Modelamos relaciones tipadas como (:Usuario)-[:SIGUE]->(:Usuario). Estudiamos cómo recorrer cadenas de relaciones y por qué los patrones son la magia de Cypher.', videoUrl: 'https://www.youtube.com/embed/ll8GrJnG-t0' },
+            { titulo: 'WHERE y filtrado', contenido: 'Refinamos los matches con WHERE para filtrar por propiedades. También vemos OPTIONAL MATCH para manejar nodos que pueden o no existir sin romper la query.', videoUrl: 'https://www.youtube.com/embed/_IgfB6zBV28' },
+          ],
+        },
+      ],
+      // ---- Curso 2: Diseño de Interfaces Modernas ----
+      [
+        {
+          titulo: 'Principios de UX',
+          descripcion: 'Fundamentos visuales para diseñadores e ingenieros.',
+          lecciones: [
+            { titulo: 'Jerarquía visual', contenido: 'La jerarquía visual guía la mirada del usuario. Usamos tamaño, peso, color y espaciado para que lo importante destaque y el resto acompañe sin distraer.', videoUrl: 'https://www.youtube.com/embed/qZy6HmPSllk' },
+            { titulo: 'Color y tipografía', contenido: 'Una paleta limitada y una tipografía consistente hacen que un producto se sienta profesional. Vemos contraste de color para accesibilidad y cómo elegir 2-3 pesos tipográficos.', videoUrl: 'https://www.youtube.com/embed/HAlIWfh0iFU' },
+          ],
+        },
+        {
+          titulo: 'Sistemas de diseño',
+          descripcion: 'De Figma a producción.',
+          lecciones: [
+            { titulo: 'Tokens de diseño', contenido: 'Los tokens son variables semánticas: --color-primary, --space-4, --radius-lg. Definir tokens permite mantener consistencia entre Figma y código sin colores hardcodeados.', videoUrl: 'https://www.youtube.com/embed/YLo6g58vUm0' },
+            { titulo: 'Componentes reutilizables', contenido: 'Diseñamos un sistema de botones, inputs y tarjetas que cubre el 80% de las pantallas. Documentamos variantes y estados (hover, focus, disabled) en Figma.', videoUrl: 'https://www.youtube.com/embed/DaLEBe-YTKU' },
+          ],
+        },
+      ],
+      // ---- Curso 3: Machine Learning con Python ----
+      [
+        {
+          titulo: 'Fundamentos',
+          descripcion: 'Las bases conceptuales y las herramientas.',
+          lecciones: [
+            { titulo: '¿Qué es Machine Learning?', contenido: 'ML es el subcampo de la IA donde los modelos aprenden patrones a partir de datos. Comparamos aprendizaje supervisado, no supervisado y por refuerzo con ejemplos cotidianos.', videoUrl: 'https://www.youtube.com/embed/ukzFI9rgwfU' },
+            { titulo: 'NumPy y pandas', contenido: 'NumPy maneja arrays multidimensionales con operaciones vectorizadas rapidísimas. Pandas, encima de NumPy, nos da DataFrames para trabajar con datos tabulares como en Excel pero programable.', videoUrl: 'https://www.youtube.com/embed/QUT1VHiLplI' },
+          ],
+        },
+        {
+          titulo: 'Modelos supervisados',
+          descripcion: 'Predicción con etiquetas.',
+          lecciones: [
+            { titulo: 'Regresión lineal', contenido: 'La regresión lineal es el modelo más simple y un excelente punto de partida. Ajustamos una recta a los datos minimizando el error cuadrático y evaluamos con R².', videoUrl: 'https://www.youtube.com/embed/CtsRRUddV2s' },
+            { titulo: 'Árboles de decisión', contenido: 'Los árboles dividen el espacio de features en regiones simples. Son interpretables, manejan datos categóricos y son la base de modelos potentes como Random Forest.', videoUrl: 'https://www.youtube.com/embed/7VeUPuFGJHk' },
+            { titulo: 'Redes neuronales', contenido: 'Una red neuronal aproxima funciones complejas combinando neuronas en capas. Implementamos una red básica con scikit-learn y vemos por qué Deep Learning es solo agregar más capas.', videoUrl: 'https://www.youtube.com/embed/aircAruvnKk' },
+          ],
+        },
+      ],
+      // ---- Curso 4: Álgebra Lineal Aplicada ----
+      [
+        {
+          titulo: 'Vectores y matrices',
+          descripcion: 'Los bloques de construcción.',
+          lecciones: [
+            { titulo: 'Operaciones con vectores', contenido: 'Sumar, restar y escalar vectores son operaciones básicas con interpretación geométrica clara. El producto punto mide cuánto se parecen dos vectores en dirección.', videoUrl: 'https://www.youtube.com/embed/fNk_zzaMoSs' },
+            { titulo: 'Multiplicación de matrices', contenido: 'Multiplicar matrices es componer transformaciones lineales. Estudiamos la regla fila-columna y por qué el orden importa (A·B no siempre es B·A).', videoUrl: 'https://www.youtube.com/embed/XkY2DOUCWMU' },
+          ],
+        },
+        {
+          titulo: 'Transformaciones lineales',
+          descripcion: 'Geometría y aplicaciones.',
+          lecciones: [
+            { titulo: 'Aplicaciones geométricas', contenido: 'Rotaciones, escalados y reflexiones se representan con matrices. Esto es lo que usa cualquier motor gráfico para mover objetos en una escena 3D.', videoUrl: 'https://www.youtube.com/embed/kYB8IZa5AuE' },
+            { titulo: 'Valores propios', contenido: 'Los autovalores y autovectores revelan las direcciones en que una transformación solo escala. Son la base de PCA, una de las técnicas más usadas en ciencia de datos.', videoUrl: 'https://www.youtube.com/embed/PFDu1MEgHug' },
+          ],
+        },
+      ],
+      // ---- Curso 5: Inglés para Desarrolladores ----
+      [
+        {
+          titulo: 'Vocabulario técnico',
+          descripcion: 'Las palabras que vas a leer todos los días.',
+          lecciones: [
+            { titulo: 'Términos de programación', contenido: 'Repository, branch, merge, deploy, rollback, refactor. Aprendemos los verbos y sustantivos más usados en GitHub y JIRA con su pronunciación correcta.', videoUrl: 'https://www.youtube.com/embed/6Ps5KGXN2ZY' },
+            { titulo: 'Frases en code reviews', contenido: '"LGTM", "nit:", "can we extract this into a function?". Practicamos las frases típicas de un PR review para opinar y sugerir sin sonar agresivo.', videoUrl: 'https://www.youtube.com/embed/1HTCaf9q6eE' },
+          ],
+        },
+        {
+          titulo: 'Comunicación profesional',
+          descripcion: 'Hablar y escribir en el día a día.',
+          lecciones: [
+            { titulo: 'Standups en inglés', contenido: 'En un daily standup contás qué hiciste ayer, qué vas a hacer hoy y si tenés blockers. Practicamos plantillas de frases para sonar natural sin tropezarte.', videoUrl: 'https://www.youtube.com/embed/HGsHpNqHd2I' },
+            { titulo: 'Documentación clara', contenido: 'Una buena README explica qué hace el proyecto, cómo correrlo y cómo contribuir. Vemos plantillas y conectores típicos en documentación técnica anglosajona.', videoUrl: 'https://www.youtube.com/embed/a3bCAfJV1ao' },
+          ],
+        },
+      ],
+    ];
+
+    // Lista plana de lecciones por curso, para uso posterior en progreso
+    const leccionesPorCurso = []; // leccionesPorCurso[cursoIdx] = [leccion, leccion, ...]
+    let totalModulos = 0;
+    let totalLecciones = 0;
+
+    for (let cIdx = 0; cIdx < cursos.length; cIdx++) {
+      const curso = cursos[cIdx];
+      const modulos = modulosPorCurso[cIdx] || [];
+      const cursoLecciones = [];
+
+      for (let mIdx = 0; mIdx < modulos.length; mIdx++) {
+        const m = modulos[mIdx];
+        const modulo = await prisma.modulo.create({
+          data: {
+            titulo: m.titulo,
+            descripcion: m.descripcion,
+            orden: mIdx + 1,
+            cursoId: curso.id,
+          },
+        });
+        totalModulos += 1;
+
+        for (let lIdx = 0; lIdx < m.lecciones.length; lIdx++) {
+          const l = m.lecciones[lIdx];
+          const leccion = await prisma.leccion.create({
+            data: {
+              titulo: l.titulo,
+              contenido: l.contenido,
+              videoUrl: l.videoUrl ?? null,
+              orden: lIdx + 1,
+              moduloId: modulo.id,
+            },
+          });
+          cursoLecciones.push(leccion);
+          totalLecciones += 1;
+        }
+      }
+      leccionesPorCurso.push(cursoLecciones);
+    }
+    console.log(`📖 ${totalModulos} módulos y ${totalLecciones} lecciones creadas`);
+
+    // ---- 6. Inscripciones ----
+    const lucia = userByUsername['lucia_tech'];
+    const neo4jDemo = userByUsername['neo4j_demo'];
+
+    const inscripcionesData = [
+      // lucia_tech → cursos 1, 2, 3 (índices 0, 1, 2) — todos sin completar
+      { usuario: lucia,     curso: cursos[0], completado: false, fechaCompletado: null },
+      { usuario: lucia,     curso: cursos[1], completado: false, fechaCompletado: null },
+      { usuario: lucia,     curso: cursos[2], completado: false, fechaCompletado: null },
+      // neo4j_demo → cursos 1 (completado) y 4 (no completado)
+      { usuario: neo4jDemo, curso: cursos[0], completado: true,  fechaCompletado: new Date() },
+      { usuario: neo4jDemo, curso: cursos[3], completado: false, fechaCompletado: null },
+    ];
+
+    for (const i of inscripcionesData) {
+      await prisma.inscripcion.create({
+        data: {
+          usuarioId: i.usuario.id,
+          cursoId: i.curso.id,
+          completado: i.completado,
+          fechaCompletado: i.fechaCompletado,
+        },
+      });
+    }
+    console.log(`✏️  ${inscripcionesData.length} inscripciones creadas`);
+
+    // ---- 7. Progreso ----
+    let totalProgresos = 0;
+
+    // lucia_tech: primera lección del curso 1 y del curso 2
+    await prisma.progreso.create({
+      data: {
+        usuarioId: lucia.id,
+        leccionId: leccionesPorCurso[0][0].id,
+        completada: true,
+        fechaCompletado: new Date(),
+      },
+    });
+    totalProgresos += 1;
+    await prisma.progreso.create({
+      data: {
+        usuarioId: lucia.id,
+        leccionId: leccionesPorCurso[1][0].id,
+        completada: true,
+        fechaCompletado: new Date(),
+      },
+    });
+    totalProgresos += 1;
+
+    // neo4j_demo: TODAS las lecciones del curso 1
+    for (const leccion of leccionesPorCurso[0]) {
+      await prisma.progreso.create({
+        data: {
+          usuarioId: neo4jDemo.id,
+          leccionId: leccion.id,
+          completada: true,
+          fechaCompletado: new Date(),
+        },
+      });
+      totalProgresos += 1;
+    }
+    console.log(`📈 ${totalProgresos} progresos creados`);
+
+    // ---- 8. Crear relaciones INSCRITO_EN en Neo4j ----
+    for (const i of inscripcionesData) {
+      await run(
+        `MATCH (u:Usuario {id: $neoId})
+         MERGE (cref:CursoRef {cursoId: $cursoId})
+         MERGE (u)-[r:INSCRITO_EN]->(cref)
+         ON CREATE SET r.fechaInscripcion = datetime()`,
+        { neoId: i.usuario.neoId, cursoId: i.curso.id },
+      );
+    }
+    console.log(`🔗 ${inscripcionesData.length} relaciones INSCRITO_EN creadas en Neo4j`);
+
+    // ---- 9. Logros ----
+    const logrosData = [
+      {
+        nombre: 'Primera lección',
+        descripcion: '¡Completaste tu primera lección en Titi!',
+        icono: '📚',
+        tipo: 'curso',
+        condicion: 'Marcar al menos una lección como completada.',
+      },
+      {
+        nombre: 'Racha de 7 días',
+        descripcion: 'Estudiaste 7 días seguidos sin saltarte uno.',
+        icono: '🔥',
+        tipo: 'racha',
+        condicion: 'Mantener una racha activa de 7 días.',
+      },
+      {
+        nombre: 'Social',
+        descripcion: 'Empezaste a construir tu red de aprendizaje en Titi.',
+        icono: '🤝',
+        tipo: 'social',
+        condicion: 'Seguir al menos a 3 usuarios.',
+      },
+    ];
+
+    const logros = {};
+    for (const l of logrosData) {
+      logros[l.nombre] = await prisma.logro.create({ data: l });
+    }
+    console.log(`🏅 ${logrosData.length} logros creados`);
+
+    // ---- 10. Asignar LogroUsuario ----
+    await prisma.logroUsuario.create({
+      data: {
+        usuarioId: lucia.id,
+        logroId: logros['Primera lección'].id,
+      },
+    });
+    await prisma.logroUsuario.create({
+      data: {
+        usuarioId: userByUsername['abdair'].id,
+        logroId: logros['Racha de 7 días'].id,
+      },
+    });
+    console.log('🏆 2 logros asignados (LogroUsuario)');
+
+    console.log('\n📧 Cuentas demo: abdair@demo.com, lucia@demo.com / password123');
+  } catch (err) {
+    console.error('❌ Error en seed de PostgreSQL:', err);
+    throw err;
+  } finally {
+    await prisma.$disconnect();
+  }
 
   console.log('\n✅ Seed completado!');
   console.log('📧 Login de prueba: abdair@demo.com / password123');

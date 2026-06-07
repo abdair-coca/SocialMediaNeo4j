@@ -18,6 +18,7 @@ import Navbar from './components/Navbar.jsx';
 import Courses from './pages/Courses.jsx'
 import CourseDetail from './pages/CourseDetail.jsx'
 import MyCourses from './pages/MyCourses.jsx'
+import LearnCourse from './pages/LearnCourse.jsx'
 
 // ---- Layouts ----
 
@@ -108,6 +109,7 @@ export default function App() {
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:id" element={<CourseDetail />} />
         <Route path="/my-courses" element={<MyCourses />} />
+        <Route path="/courses/:id/learn" element={<LearnCourse />} />
       </Route>
 
       {/* 404 */}

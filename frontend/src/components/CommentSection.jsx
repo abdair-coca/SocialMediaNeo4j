@@ -78,20 +78,21 @@ export default function CommentSection({ postId, onCountChange }) {
   return (
     <section
       aria-label="Comentarios"
-      className="px-5 py-4 border-t border-neo-border bg-neo-bg/40"
+      className="px-5 py-4 border-t border-titi-border bg-titi-bg/60"
     >
       {/* Form */}
       {isAuthenticated ? (
         <form onSubmit={handleSubmit} className="mb-4">
           {replyTo && (
-            <div className="flex items-center gap-2 text-xs text-neo-muted mb-2">
+            <div className="flex items-center gap-2 text-xs text-titi-muted mb-2">
               <span>
-                Respondiendo a <span className="text-neo-accent font-semibold">@{replyTo.author}</span>
+                Respondiendo a{' '}
+                <span className="text-titi-dark font-bold">@{replyTo.author}</span>
               </span>
               <button
                 type="button"
                 onClick={() => setReplyTo(null)}
-                className="text-white/60 hover:text-white"
+                className="text-titi-muted hover:text-titi-dark transition-colors font-semibold"
               >
                 cancelar
               </button>
@@ -102,7 +103,7 @@ export default function CommentSection({ postId, onCountChange }) {
               <img
                 src={user.avatarUrl}
                 alt=""
-                className="hidden sm:block w-8 h-8 rounded-full bg-neo-bg border border-neo-border shrink-0 mt-1"
+                className="hidden sm:block w-8 h-8 rounded-full bg-titi-bg border border-titi-border shrink-0 mt-1"
               />
             )}
             <input
@@ -110,22 +111,22 @@ export default function CommentSection({ postId, onCountChange }) {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder={replyTo ? `Respondé a @${replyTo.author}…` : 'Escribí un comentario…'}
-              className="neo-input flex-1 min-w-0"
+              className="titi-input flex-1 min-w-0"
               disabled={submitting}
               maxLength={500}
             />
             <button
               type="submit"
               disabled={submitting || !text.trim()}
-              className="neo-btn-primary shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="titi-btn-primary shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? '…' : 'Publicar'}
             </button>
           </div>
         </form>
       ) : (
-        <p className="text-sm text-neo-muted mb-4">
-          <Link to="/login" className="text-neo-accent hover:underline">
+        <p className="text-sm text-titi-muted mb-4 font-medium">
+          <Link to="/login" className="text-titi-dark font-bold hover:text-titi-orange transition-colors">
             Iniciá sesión
           </Link>{' '}
           para comentar.
@@ -133,7 +134,7 @@ export default function CommentSection({ postId, onCountChange }) {
       )}
 
       {error && (
-        <p className="text-sm text-neo-accent mb-3" role="alert">
+        <p className="text-sm text-titi-red font-semibold mb-3" role="alert">
           {error}
         </p>
       )}
@@ -142,16 +143,16 @@ export default function CommentSection({ postId, onCountChange }) {
         <div className="space-y-3" aria-busy="true">
           {[0, 1].map((i) => (
             <div key={i} className="flex gap-3 animate-pulse">
-              <div className="w-8 h-8 rounded-full bg-neo-border shrink-0" />
+              <div className="w-8 h-8 rounded-full bg-titi-border shrink-0" />
               <div className="flex-1 space-y-2">
-                <div className="h-2 w-24 bg-neo-border rounded" />
-                <div className="h-2 w-full bg-neo-border rounded" />
+                <div className="h-2 w-24 bg-titi-border rounded" />
+                <div className="h-2 w-full bg-titi-border rounded" />
               </div>
             </div>
           ))}
         </div>
       ) : tree.roots.length === 0 ? (
-        <p className="text-sm text-neo-muted">Sé el primero en comentar.</p>
+        <p className="text-sm text-titi-muted font-medium">Sé el primero en comentar.</p>
       ) : (
         <ul className="space-y-3">
           {tree.roots.map((c) => (
@@ -170,18 +171,25 @@ export default function CommentSection({ postId, onCountChange }) {
 }
 
 function CommentItem({ comment: c, replies, onReply, canReply, depth = 0 }) {
+  // Las respuestas (depth > 0) van con fondo crema más sutil para diferenciar
+  // visualmente la jerarquía, manteniendo la legibilidad sobre el card padre.
+  const bubbleClass =
+    depth > 0
+      ? 'bg-titi-bg border border-titi-border'
+      : 'bg-white border border-titi-border shadow-titi';
+
   return (
     <li className={depth > 0 ? 'ml-8 sm:ml-11' : ''}>
-      <div className="flex gap-3">
+      <div className={`flex gap-3 p-3 rounded-2xl ${bubbleClass}`}>
         <Link to={`/profile/${c.author}`} className="shrink-0">
           {c.authorAvatar ? (
             <img
               src={c.authorAvatar}
               alt={c.author}
-              className="w-8 h-8 rounded-full bg-neo-bg border border-neo-border"
+              className="w-8 h-8 rounded-full bg-titi-bg border border-titi-border"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-neo-accent/20 text-neo-accent grid place-items-center text-sm font-bold">
+            <div className="w-8 h-8 rounded-full bg-titi-yellow/30 text-titi-dark grid place-items-center text-sm font-extrabold">
               {c.author?.[0]?.toUpperCase() ?? '?'}
             </div>
           )}
@@ -190,18 +198,22 @@ function CommentItem({ comment: c, replies, onReply, canReply, depth = 0 }) {
           <div className="flex items-baseline gap-2 flex-wrap">
             <Link
               to={`/profile/${c.author}`}
-              className="font-semibold text-sm hover:text-neo-accent"
+              className="font-bold text-sm text-titi-dark hover:text-titi-orange transition-colors"
             >
               @{c.author}
             </Link>
-            <span className="text-xs text-neo-muted">{relativeTime(c.createdAt)}</span>
+            <span className="text-xs text-titi-muted font-semibold">
+              {relativeTime(c.createdAt)}
+            </span>
           </div>
-          <p className="text-sm text-white/90 whitespace-pre-wrap break-words">{c.text}</p>
+          <p className="text-sm text-titi-dark whitespace-pre-wrap break-words mt-0.5">
+            {c.text}
+          </p>
           {canReply && depth === 0 && (
             <button
               type="button"
               onClick={() => onReply({ id: c.id, author: c.author })}
-              className="text-xs text-neo-muted hover:text-neo-accent mt-1"
+              className="text-xs font-bold text-titi-muted hover:text-titi-orange mt-1.5 transition-colors"
             >
               Responder
             </button>
@@ -209,7 +221,7 @@ function CommentItem({ comment: c, replies, onReply, canReply, depth = 0 }) {
         </div>
       </div>
       {replies.length > 0 && (
-        <ul className="mt-3 space-y-3">
+        <ul className="mt-2 space-y-2">
           {replies.map((r) => (
             <CommentItem
               key={r.id}

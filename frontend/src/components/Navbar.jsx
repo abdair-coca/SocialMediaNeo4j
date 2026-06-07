@@ -59,7 +59,7 @@ function useUnreadNotifications() {
     let cancelled = false;
     client.get('/api/notifications/unread/count')
       .then(({ data }) => { if (!cancelled && data?.success) setCount(data.data.unreadCount ?? 0); })
-      .catch(() => {});
+      .catch(() => { });
     return () => { cancelled = true; };
   }, [isAuthenticated, location.pathname]);
   return count;
@@ -142,6 +142,15 @@ function Sidebar({ user, onLogout, unread }) {
         )}
       </nav>
 
+      {user?.racha > 0 && (
+        <div className="px-4 py-3 mx-1 bg-titi-dark-mid rounded-xl flex items-center gap-3">
+          <span className="text-2xl">🔥</span>
+          <div>
+            <p className="text-white font-black text-lg leading-none">{user.racha}</p>
+            <p className="text-gray-400 text-xs font-medium">días seguidos</p>
+          </div>
+        </div>
+      )}
       <div className="border-t border-white/10 p-3 space-y-2">
         {user && (
           <Link

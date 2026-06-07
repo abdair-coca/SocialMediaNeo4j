@@ -9,7 +9,7 @@ const router = Router();
 
 function signToken(user) {
   return jwt.sign(
-    { id: user.id, username: user.username, email: user.email },
+    { id: user.id, username: user.username, email: user.email, rol: user.rol },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );
@@ -101,7 +101,17 @@ router.post('/login', async (req, res) => {
     }
 
     const user = publicUser(node);
-    const token = signToken(user);
+
+    // Obtener rol desde PostgreSQL
+    const pgUser = await prisma.usuario.findUnique({
+      where: { neoId: user.id },
+      select: { rol: true, racha: true }
+    });
+
+    user.rol = pgUser?.rol ?? 'ESTUDIANTE';
+    user.racha = pgUser?.racha ?? 0;
+
+    const token = signToken({ ...user, rol: user.rol });
     res.json({ success: true, data: { user, token } });
   } catch (err) {
     console.error('login error', err);
