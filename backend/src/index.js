@@ -28,8 +28,8 @@ const app = express();
 // Orígenes permitidos: localhost (dev) + lo que venga en FRONTEND_URL.
 // FRONTEND_URL admite múltiples URLs separadas por coma — útil para
 // combinar el dominio de producción con previews de Vercel.
-//   FRONTEND_URL=https://neosocial.vercel.app
-//   FRONTEND_URL=https://neosocial.vercel.app,https://neosocial-git-dev.vercel.app
+//   FRONTEND_URL=https://titiedu.vercel.app
+//   FRONTEND_URL=https://titiedu.vercel.app,https://titiedu-git-dev.vercel.app
 const LOCAL_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 const extraOrigins = (process.env.FRONTEND_URL || '')
   .split(',')

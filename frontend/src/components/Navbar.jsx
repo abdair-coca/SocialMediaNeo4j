@@ -226,7 +226,7 @@ function bottomItemClass({ isActive }) {
     : `${base} text-white/70 hover:text-white`;
 }
 
-function MobileBottomNav({ user, unread }) {
+function MobileBottomNav({ user }) {
   return (
     <nav
       aria-label="Navegación principal"
@@ -246,12 +246,9 @@ function MobileBottomNav({ user, unread }) {
           <Icon.Books className="w-6 h-6" />
           <span>Cursos</span>
         </NavLink>
-        <NavLink to="/notifications" className={bottomItemClass}>
-          <span className="relative inline-flex">
-            <Icon.Bell className="w-6 h-6" />
-            <NotifBadge count={unread} />
-          </span>
-          <span>Alertas</span>
+        <NavLink to="/my-courses" className={bottomItemClass}>
+          <Icon.Target className="w-6 h-6" />
+          <span>Mis cursos</span>
         </NavLink>
         <NavLink
           to={user?.username ? `/profile/${user.username}` : '/feed'}
@@ -279,7 +276,7 @@ export default function Navbar() {
     <>
       <Sidebar user={user} onLogout={handleLogout} unread={unread} />
       <MobileTopBar onLogout={handleLogout} unread={unread} />
-      <MobileBottomNav user={user} unread={unread} />
+      <MobileBottomNav user={user} />
     </>
   );
 }
