@@ -235,10 +235,10 @@ export default function LearnCourse() {
         <div className="p-4 border-b border-gray-100">
           <button
             type="button"
-            onClick={() => navigate(`/courses/${courseId}`)}
+            onClick={() => navigate(-1)}
             className="text-xs font-semibold text-gray-400 hover:text-titi-dark transition-colors mb-2 inline-flex items-center gap-1"
           >
-            ← Volver al detalle
+            ← Volver
           </button>
           <h2 className="text-base font-bold text-titi-dark leading-snug line-clamp-2">
             {curso.titulo}

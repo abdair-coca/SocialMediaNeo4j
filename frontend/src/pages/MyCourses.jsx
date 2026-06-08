@@ -23,20 +23,46 @@ export default function MyCourses() {
   const [error, setError] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
+  // Mapa cursoId → { total, completadas, porcentaje }
+  // Se llena en paralelo después de cargar las inscripciones para detectar
+  // cursos 100% completados aunque la Inscripcion no esté marcada como tal.
+  const [progressByCurso, setProgressByCurso] = useState({});
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setProgressByCurso({});
 
     client
       .get('/api/courses/my/enrolled')
       .then(({ data }) => {
         if (cancelled) return;
-        if (data?.success) {
-          setInscripciones(data.data?.inscripciones || []);
-        } else {
+        if (!data?.success) {
           setError(data?.message || 'No se pudieron cargar tus cursos');
+          return;
         }
+        const list = data.data?.inscripciones || [];
+        setInscripciones(list);
+
+        // Fetch del progreso real por curso en paralelo
+        Promise.all(
+          list.map((insc) =>
+            client
+              .get(`/api/courses/${insc.cursoId}/progress`)
+              .then(({ data }) =>
+                data?.success ? [insc.cursoId, data.data] : null,
+              )
+              .catch(() => null),
+          ),
+        ).then((results) => {
+          if (cancelled) return;
+          const map = {};
+          for (const r of results) {
+            if (r) map[r[0]] = r[1];
+          }
+          setProgressByCurso(map);
+        });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -80,6 +106,7 @@ export default function MyCourses() {
             <EnrolledCard
               key={insc.id}
               inscripcion={insc}
+              progress={progressByCurso[insc.cursoId]}
               onContinue={() => navigate(`/courses/${insc.cursoId}/learn`)}
               onOpenDetail={() => navigate(`/courses/${insc.cursoId}`)}
             />
@@ -91,86 +118,141 @@ export default function MyCourses() {
 }
 
 // ---- Card de curso inscrito ----
-function EnrolledCard({ inscripcion, onContinue, onOpenDetail }) {
+function EnrolledCard({ inscripcion, progress, onContinue, onOpenDetail }) {
   const curso = inscripcion.curso || {};
-  const completado = Boolean(inscripcion.completado);
+
+  // Completado real = lo que diga el backend OR todas las lecciones marcadas
+  const computedComplete = Boolean(
+    progress && progress.total > 0 && progress.completadas === progress.total,
+  );
+  const completado = Boolean(inscripcion.completado) || computedComplete;
+
+  const porcentaje = progress?.porcentaje ?? 0;
+  const hasProgressData = Boolean(progress && progress.total > 0);
 
   return (
-    <article className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] hover:-translate-y-1 transition-all duration-200 p-5 flex flex-col gap-3">
-      {/* Header: categoría + estado */}
-      <div className="flex items-start justify-between gap-2">
-        {curso.categoria?.nombre ? (
-          <span className="text-xs font-semibold text-titi-streak uppercase tracking-wide">
-            {curso.categoria.nombre}
-          </span>
-        ) : (
-          <span />
-        )}
-
-        {completado && (
-          <span className="bg-green-50 text-green-700 border border-green-200 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">
-            Completado ✓
-          </span>
-        )}
-      </div>
-
-      {/* Título */}
+    <article className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] hover:-translate-y-1 transition-all duration-200 overflow-hidden flex flex-col">
+      {/* Portada con badges */}
       <button
         type="button"
         onClick={onOpenDetail}
-        className="text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow rounded-lg"
+        aria-label={`Ver detalle de ${curso.titulo || 'curso'}`}
+        className="relative h-40 bg-gradient-to-br from-titi-yellow-light via-titi-yellow-light to-titi-yellow/40 overflow-hidden block w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
       >
-        <h3 className="text-base font-bold text-titi-dark leading-snug line-clamp-2 hover:text-titi-yellow-dark transition-colors">
-          {curso.titulo || 'Curso sin título'}
-        </h3>
-      </button>
+        {curso.portadaUrl ? (
+          <img
+            src={curso.portadaUrl}
+            alt=""
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        ) : (
+          <>
+            <span
+              aria-hidden="true"
+              className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/40 blur-xl"
+            />
+            <span
+              aria-hidden="true"
+              className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-titi-yellow/30 blur-xl"
+            />
+            <div className="relative w-full h-full grid place-items-center text-6xl select-none drop-shadow-sm">
+              {curso.categoria?.icono || '📚'}
+            </div>
+          </>
+        )}
 
-      {/* Meta: nivel + categoría */}
-      <div className="flex items-center gap-2 flex-wrap">
+        {/* Badge de nivel — top-left */}
         {curso.nivel && (
-          <span className="inline-block bg-titi-yellow-light text-titi-dark text-xs font-semibold capitalize px-3 py-1 rounded-full">
+          <span className="absolute top-3 left-3 bg-white text-titi-dark text-xs font-semibold capitalize px-2.5 py-1 rounded-full shadow-sm">
             {curso.nivel}
           </span>
         )}
+
+        {/* Badge "Completado" — top-right */}
+        {completado && (
+          <span className="absolute top-3 right-3 bg-green-50 text-green-700 border border-green-200 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap shadow-sm">
+            Completado ✓
+          </span>
+        )}
+      </button>
+
+      {/* Cuerpo */}
+      <div className="p-5 flex flex-col gap-2 flex-1">
+        {/* Categoría */}
         {curso.categoria?.nombre && (
-          <span className="text-xs font-medium text-gray-500">
-            {curso.categoria.icono ? `${curso.categoria.icono} ` : ''}
+          <span className="text-xs font-semibold text-titi-streak uppercase tracking-wide">
             {curso.categoria.nombre}
           </span>
         )}
-      </div>
 
-      {/* Fecha de inscripción */}
-      <p className="text-sm font-medium text-gray-500">
-        Inscrito el {formatDateEs(inscripcion.fechaInscripcion)}
-      </p>
+        {/* Título */}
+        <button
+          type="button"
+          onClick={onOpenDetail}
+          className="text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow rounded-lg"
+        >
+          <h3 className="text-base font-bold text-titi-dark leading-snug line-clamp-2 hover:text-titi-yellow-dark transition-colors">
+            {curso.titulo || 'Curso sin título'}
+          </h3>
+        </button>
 
-      {/* Acción */}
-      <div className="mt-auto pt-2">
-        {completado ? (
-          <div className="flex items-center justify-between gap-2">
-            {inscripcion.fechaCompletado && (
-              <span className="text-xs font-semibold text-gray-400">
-                Completado el {formatDateEs(inscripcion.fechaCompletado)}
+        {/* Fecha de inscripción */}
+        <p className="text-sm font-medium text-gray-500">
+          Inscrito el {formatDateEs(inscripcion.fechaInscripcion)}
+        </p>
+
+        {/* Barra de progreso */}
+        {hasProgressData && (
+          <div className="mt-1">
+            <div className="flex justify-between text-xs font-medium text-gray-400 mb-1">
+              <span>
+                {progress.completadas} / {progress.total}{' '}
+                {progress.total === 1 ? 'lección' : 'lecciones'}
               </span>
-            )}
+              <span className="tabular-nums">{porcentaje}%</span>
+            </div>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  completado ? 'bg-green-500' : 'bg-titi-yellow'
+                }`}
+                style={{ width: `${porcentaje}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Acción */}
+        <div className="mt-auto pt-3">
+          {completado ? (
+            <div className="flex items-center justify-between gap-2">
+              {inscripcion.fechaCompletado && (
+                <span className="text-xs font-semibold text-gray-400">
+                  Completado el {formatDateEs(inscripcion.fechaCompletado)}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={onOpenDetail}
+                className="text-sm font-semibold text-titi-dark hover:text-titi-yellow-dark transition-colors ml-auto"
+              >
+                Ver curso →
+              </button>
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={onOpenDetail}
-              className="text-sm font-semibold text-titi-dark hover:text-titi-yellow-dark transition-colors"
+              onClick={onContinue}
+              className="bg-titi-yellow text-titi-dark font-bold px-4 py-2 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
             >
-              Ver curso →
+              Continuar →
             </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onContinue}
-            className="bg-titi-yellow text-titi-dark font-bold px-4 py-2 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
-          >
-            Continuar →
-          </button>
-        )}
+          )}
+        </div>
       </div>
     </article>
   );
@@ -237,16 +319,16 @@ function SkeletonGrid() {
       {Array.from({ length: 6 }).map((_, i) => (
         <div
           key={i}
-          className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-3 animate-pulse"
+          className="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col animate-pulse"
         >
-          <div className="h-3 w-24 bg-gray-100 rounded-full" />
-          <div className="h-5 w-3/4 bg-gray-100 rounded" />
-          <div className="flex gap-2">
-            <div className="h-6 w-20 bg-gray-100 rounded-full" />
-            <div className="h-6 w-16 bg-gray-100 rounded-full" />
+          <div className="h-40 bg-gray-100" />
+          <div className="p-5 flex flex-col gap-3">
+            <div className="h-3 w-24 bg-gray-100 rounded-full" />
+            <div className="h-5 w-3/4 bg-gray-100 rounded" />
+            <div className="h-3 w-1/2 bg-gray-100 rounded" />
+            <div className="h-2 w-full bg-gray-100 rounded-full mt-2" />
+            <div className="h-9 w-32 bg-gray-100 rounded-xl mt-2" />
           </div>
-          <div className="h-3 w-1/2 bg-gray-100 rounded" />
-          <div className="h-9 w-32 bg-gray-100 rounded-xl mt-2" />
         </div>
       ))}
     </div>

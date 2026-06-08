@@ -4,6 +4,7 @@ import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { formatDate, relativeTime, resolveMediaUrl } from '../lib/format.js';
 import OptionsPosts from '../components/OptionsPosts.jsx';
+import PostCard from '../components/PostCard.jsx';
 
 export default function Profile() {
   const { username } = useParams();
@@ -217,7 +218,7 @@ export default function Profile() {
         {!postsLoading && !postsError && posts.length > 0 && (
           <div className="space-y-4">
             {posts.map((p) => (
-              <SimplePostCard
+              <PostCard
                 key={p.id}
                 post={p}
                 onDelete={handleDeletePost}
@@ -228,78 +229,6 @@ export default function Profile() {
         )}
       </section>
     </div>
-  );
-}
-
-function SimplePostCard({ post, onDelete, onEdit }) {
-  const { user, isAuthenticated } = useAuth();
-  const imageUrl = resolveMediaUrl(post.imageUrl);
-  const [likedByMe, setLikedByMe] = useState(Boolean(post.likedByMe));
-  const [likes, setLikes] = useState(post.likes ?? 0);
-  const [liking, setLiking] = useState(false);
-
-  async function toggleLike() {
-    if (!isAuthenticated || liking) return;
-    const prevLiked = likedByMe;
-    const prevLikes = likes;
-    setLikedByMe(!prevLiked);
-    setLikes(prevLikes + (prevLiked ? -1 : 1));
-    setLiking(true);
-    try {
-      const { data } = await client.post(`/api/posts/${post.id}/like`);
-      if (data?.success) {
-        setLikedByMe(Boolean(data.data.liked));
-        setLikes(Number(data.data.likes ?? 0));
-      } else {
-        setLikedByMe(prevLiked); setLikes(prevLikes);
-      }
-    } catch {
-      setLikedByMe(prevLiked); setLikes(prevLikes);
-    } finally {
-      setLiking(false);
-    }
-  }
-
-  return (
-    <article className="bg-white rounded-2xl shadow-titi border border-titi-border overflow-hidden hover:shadow-titi-lg transition-shadow">
-      <div className="flex justify-end p-3">
-        <OptionsPosts user={user} post={post} onDelete={onDelete} onEdit={onEdit} />
-      </div>
-      {imageUrl && (
-        <div className="bg-titi-bg">
-          <img src={imageUrl} alt="" className="w-full max-h-[480px] object-cover" loading="lazy" />
-        </div>
-      )}
-      <div className="px-5 py-4">
-        {post.content && (
-          <p className="whitespace-pre-wrap leading-relaxed text-titi-text">{post.content}</p>
-        )}
-        <div className="flex items-center justify-between mt-3">
-          <time
-            dateTime={post.createdAt}
-            title={formatDate(post.createdAt)}
-            className="text-sm text-titi-muted font-semibold"
-          >
-            {relativeTime(post.createdAt)}
-          </time>
-          <button
-            type="button"
-            onClick={toggleLike}
-            disabled={!isAuthenticated || liking}
-            aria-pressed={likedByMe}
-            aria-label={likedByMe ? 'Quitar like' : 'Dar like'}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold transition-all ${
-              likedByMe
-                ? 'text-titi-red bg-titi-red/10 scale-105'
-                : 'text-titi-muted hover:bg-titi-bg hover:text-titi-red'
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            <HeartIcon filled={likedByMe} className="w-5 h-5" />
-            <span className="tabular-nums text-sm">{likes}</span>
-          </button>
-        </div>
-      </div>
-    </article>
   );
 }
 

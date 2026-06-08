@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -224,9 +224,12 @@ export default function CourseDetail() {
                 {curso.creador?.username && (
                   <span>
                     Por{' '}
-                    <span className="text-titi-dark font-bold">
+                    <Link
+                      to={`/profile/${curso.creador.username}`}
+                      className="text-titi-dark font-bold hover:text-titi-yellow-dark transition-colors"
+                    >
                       @{curso.creador.username}
-                    </span>
+                    </Link>
                   </span>
                 )}
                 {curso.createdAt && (
@@ -393,10 +396,10 @@ export default function CourseDetail() {
               ) : enrolled ? (
                 <button
                   type="button"
-                  onClick={() => navigate('/my-courses')}
+                  onClick={() => navigate(`/courses/${courseId}/learn`)}
                   className="bg-titi-yellow text-titi-dark font-bold text-base w-full px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
                 >
-                  Ir a mis cursos →
+                  Continuar →
                 </button>
               ) : (
                 <button

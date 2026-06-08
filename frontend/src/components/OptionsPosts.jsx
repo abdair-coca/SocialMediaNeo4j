@@ -150,7 +150,7 @@ export default function OptionsPosts({
         aria-haspopup="menu"
         aria-expanded={showMenu}
         aria-label="Opciones del post"
-        className="p-2 rounded-full text-white/70 hover:bg-neo-bg hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-neo-accent/40"
+        className="p-2 rounded-full text-gray-400 hover:bg-titi-cream hover:text-titi-dark transition-colors focus:outline-none focus:ring-2 focus:ring-titi-yellow/40"
       >
         <DotsIcon className="w-5 h-5" />
       </button>
@@ -159,7 +159,7 @@ export default function OptionsPosts({
         <div
           role="menu"
           aria-label="Acciones del post"
-          className="absolute right-0 top-full mt-2 w-56 bg-neo-card border border-neo-border rounded-xl shadow-neo overflow-hidden z-30 py-1"
+          className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] overflow-hidden z-30 py-1"
         >
           {isOwner ? (
             <>
@@ -208,7 +208,7 @@ export default function OptionsPosts({
           {!isOwner && (
             <>
               <Divider />
-              <div className="px-4 py-2 text-xs text-neo-muted">
+              <div className="px-4 py-2 text-xs font-medium text-gray-500">
                 Solo el autor puede editar o eliminar este post.
               </div>
             </>
@@ -247,17 +247,21 @@ export default function OptionsPosts({
 }
 
 function MenuItem({ icon, children, onClick, danger = false, copied = false }) {
+  // Per design.md sección 2:
+  //   danger  → rojo (#EF4444 / red-500 + red-50 hover)
+  //   copied  → verde de éxito (#22C55E / green-600 + green-50)
+  //   normal  → texto oscuro sobre crema en hover
   return (
     <button
       role="menuitem"
       type="button"
       onClick={onClick}
-      className={`w-full text-left px-4 py-2 flex items-center gap-3 text-sm font-medium transition-colors focus:outline-none ${
+      className={`w-full text-left px-4 py-2 flex items-center gap-3 text-sm font-semibold transition-colors focus:outline-none ${
         danger
-          ? 'text-neo-accent hover:bg-neo-accent/10 focus:bg-neo-accent/10'
+          ? 'text-red-500 hover:bg-red-50 focus:bg-red-50'
           : copied
-          ? 'text-neo-accent bg-neo-accent/5'
-          : 'text-white/90 hover:bg-neo-bg focus:bg-neo-bg'
+          ? 'text-green-600 bg-green-50'
+          : 'text-titi-dark hover:bg-titi-cream focus:bg-titi-cream'
       }`}
     >
       <span className="shrink-0">{icon}</span>
@@ -267,5 +271,5 @@ function MenuItem({ icon, children, onClick, danger = false, copied = false }) {
 }
 
 function Divider() {
-  return <div className="h-px bg-neo-border my-1" aria-hidden="true" />;
+  return <div className="h-px bg-gray-100 my-1" aria-hidden="true" />;
 }
