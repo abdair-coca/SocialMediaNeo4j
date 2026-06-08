@@ -37,7 +37,7 @@ function ProtectedLayout() {
       {/* En móvil: deja espacio para el top bar (h-14) y el bottom nav (h-16 + safe area iOS). */}
       {/* En desktop (md+): solo padding-left para el sidebar (w-64). */}
       <main className="min-h-screen pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-64">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
           <Outlet />
         </div>
       </main>
@@ -60,7 +60,7 @@ function Home() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
       <h1 className="text-5xl sm:text-6xl font-extrabold mb-4">
-        Neo<span className="text-neo-accent">Social</span>
+        Titi<span className="text-neo-accent"> Edu</span>
       </h1>
       <p className="text-neo-muted mb-8 max-w-md">
         Red social basada en grafos · Neo4j + React

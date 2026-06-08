@@ -90,7 +90,7 @@ function TitiLogo({ size = 'md' }) {
         draggable={false}
         onError={(e) => (e.currentTarget.style.display = 'none')}
       />
-      <span className={`${text} font-extrabold lowercase tracking-tight`}>titi</span>
+      <span className={`${text} font-extrabold lowercase tracking-tight`}>Titi</span>
     </span>
   );
 }

@@ -125,33 +125,27 @@ export default function CourseDetail() {
 
   // --- Render: loading ---
   if (loading) {
-    return (
-      <div className="bg-titi-cream min-h-screen p-8">
-        <LoadingSkeleton />
-      </div>
-    );
+    return <LoadingSkeleton />;
   }
 
   // --- Render: error ---
   if (error) {
     return (
-      <div className="bg-titi-cream min-h-screen p-8">
-        <div className="max-w-2xl">
-          <button
-            type="button"
-            onClick={() => navigate('/courses')}
-            className="text-sm font-semibold text-gray-500 hover:text-titi-dark transition-colors mb-4 inline-flex items-center gap-1"
-          >
-            ← Volver al catálogo
-          </button>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-            <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-red-700">
-                No pudimos cargar el curso
-              </p>
-              <p className="text-xs text-red-500 mt-0.5">{error}</p>
-            </div>
+      <div className="max-w-2xl">
+        <button
+          type="button"
+          onClick={() => navigate('/courses')}
+          className="text-sm font-semibold text-gray-500 hover:text-titi-dark transition-colors mb-4 inline-flex items-center gap-1"
+        >
+          ← Volver al catálogo
+        </button>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-700">
+              No pudimos cargar el curso
+            </p>
+            <p className="text-xs text-red-500 mt-0.5">{error}</p>
           </div>
         </div>
       </div>
@@ -160,23 +154,23 @@ export default function CourseDetail() {
 
   if (!curso) return null;
   return (
-    <div className="bg-titi-cream min-h-screen p-8">
+    <div>
       {/* Volver */}
       <button
         type="button"
         onClick={() => navigate('/courses')}
-        className="text-sm font-semibold text-gray-500 hover:text-titi-dark transition-colors mb-6 inline-flex items-center gap-1"
+        className="text-sm font-semibold text-gray-500 hover:text-titi-dark transition-colors mb-4 sm:mb-6 inline-flex items-center gap-1"
       >
         ← Volver al catálogo
       </button>
 
-      <div className="lg:grid lg:grid-cols-3 gap-8">
+      <div className="lg:grid lg:grid-cols-3 lg:gap-8">
         {/* --- Columna izquierda: contenido --- */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
+        <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6">
           {/* Hero del curso */}
           <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden">
             {/* Portada */}
-            <div className="relative h-56 bg-gradient-to-br from-titi-yellow-light via-titi-yellow-light to-titi-yellow/40 overflow-hidden">
+            <div className="relative h-40 sm:h-48 md:h-56 bg-gradient-to-br from-titi-yellow-light via-titi-yellow-light to-titi-yellow/40 overflow-hidden">
               {curso.portadaUrl ? (
                 <img
                   src={curso.portadaUrl}
@@ -204,7 +198,7 @@ export default function CourseDetail() {
             </div>
 
             {/* Encabezado */}
-            <div className="p-6 sm:p-8 flex flex-col gap-4">
+            <div className="p-5 sm:p-6 md:p-8 flex flex-col gap-3 sm:gap-4">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="inline-block bg-titi-yellow-light text-titi-dark text-xs font-semibold capitalize px-3 py-1 rounded-full">
                   {curso.nivel || 'sin nivel'}
@@ -216,11 +210,11 @@ export default function CourseDetail() {
                 )}
               </div>
 
-              <h1 className="text-3xl font-extrabold text-titi-dark leading-tight">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark leading-tight">
                 {curso.titulo}
               </h1>
 
-              <div className="flex items-center gap-4 flex-wrap text-sm font-medium text-gray-500">
+              <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-xs sm:text-sm font-medium text-gray-500">
                 {curso.creador?.username && (
                   <span>
                     Por{' '}
@@ -245,15 +239,15 @@ export default function CourseDetail() {
                 )}
               </div>
 
-              <p className="text-base text-titi-dark leading-relaxed whitespace-pre-line">
+              <p className="text-sm sm:text-base text-titi-dark leading-relaxed whitespace-pre-line">
                 {curso.descripcion}
               </p>
             </div>
           </section>
 
           {/* Lista de módulos */}
-          <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-6 sm:p-8">
-            <h2 className="text-2xl font-bold text-titi-dark mb-1">
+          <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-5 sm:p-6 md:p-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-titi-dark mb-1">
               Contenido del curso
             </h2>
             <p className="text-sm font-medium text-gray-500 mb-5">
@@ -307,9 +301,9 @@ export default function CourseDetail() {
           </section>
         </div>
 
-        {/* --- Columna derecha: enrollment card sticky --- */}
-        <aside className="mt-6 lg:mt-0">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-6 sticky top-8 flex flex-col gap-4">
+        {/* --- Columna derecha: enrollment card sticky en lg+ --- */}
+        <aside className="mt-4 sm:mt-6 lg:mt-0">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-5 sm:p-6 lg:sticky lg:top-8 flex flex-col gap-4">
             <h2 className="text-xl font-bold text-titi-dark">
               {enrolled ? 'Ya estás inscrito 🎉' : 'Comenzá a aprender'}
             </h2>
@@ -443,20 +437,20 @@ function Stat({ icon, label }) {
 
 function LoadingSkeleton() {
   return (
-    <div className="lg:grid lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2 flex flex-col gap-6">
+    <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+      <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6">
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse">
-          <div className="h-56 bg-gray-100" />
-          <div className="p-8 flex flex-col gap-4">
+          <div className="h-40 sm:h-48 md:h-56 bg-gray-100" />
+          <div className="p-5 sm:p-6 md:p-8 flex flex-col gap-3 sm:gap-4">
             <div className="h-3 w-24 bg-gray-100 rounded-full" />
-            <div className="h-7 w-3/4 bg-gray-100 rounded" />
+            <div className="h-6 sm:h-7 w-3/4 bg-gray-100 rounded" />
             <div className="h-3 w-1/2 bg-gray-100 rounded" />
             <div className="h-4 w-full bg-gray-100 rounded mt-2" />
             <div className="h-4 w-5/6 bg-gray-100 rounded" />
             <div className="h-4 w-2/3 bg-gray-100 rounded" />
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-8 animate-pulse flex flex-col gap-3">
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 md:p-8 animate-pulse flex flex-col gap-3">
           <div className="h-5 w-1/3 bg-gray-100 rounded mb-3" />
           {Array.from({ length: 3 }).map((_, i) => (
             <div
@@ -466,8 +460,8 @@ function LoadingSkeleton() {
           ))}
         </div>
       </div>
-      <div className="mt-6 lg:mt-0">
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 animate-pulse flex flex-col gap-4">
+      <div className="mt-4 sm:mt-6 lg:mt-0">
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 animate-pulse flex flex-col gap-4">
           <div className="h-5 w-2/3 bg-gray-100 rounded" />
           <div className="h-3 w-full bg-gray-100 rounded" />
           <div className="h-3 w-5/6 bg-gray-100 rounded" />

@@ -80,10 +80,10 @@ export default function MyCourses() {
   }, [refreshTick]);
 
   return (
-    <div className="bg-titi-cream min-h-screen p-8">
+    <div>
       {/* Header */}
-      <header className="mb-8">
-        <h1 className="text-3xl font-extrabold text-titi-dark">
+      <header className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark">
           Mis cursos
         </h1>
         <p className="text-sm font-medium text-gray-500 mt-1">
@@ -101,7 +101,7 @@ export default function MyCourses() {
       ) : inscripciones.length === 0 ? (
         <EmptyState onExplore={() => navigate('/courses')} />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {inscripciones.map((insc) => (
             <EnrolledCard
               key={insc.id}

@@ -321,17 +321,17 @@ export default function LearnCourse() {
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="md:hidden mb-4 text-sm font-semibold text-titi-dark bg-white border border-gray-200 rounded-xl px-4 py-2 hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
+            className="md:hidden mb-4 w-full text-sm font-semibold text-titi-dark bg-white border border-gray-200 rounded-xl px-4 py-3 hover:bg-gray-50 transition-colors inline-flex items-center gap-2 justify-center"
           >
-            ☰ Ver lecciones
+            ☰ Ver lecciones ({completedCount}/{totalLessons})
           </button>
 
           {/* Barra de progreso */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-5 sm:mb-6">
             <button
               type="button"
               onClick={() => navigate('/my-courses')}
-              className="text-gray-400 hover:text-gray-600 text-lg leading-none transition-colors"
+              className="w-9 h-9 grid place-items-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 text-lg leading-none transition-colors shrink-0"
               aria-label="Cerrar curso"
               title="Salir del curso"
             >
@@ -389,12 +389,12 @@ function LessonView({ leccion, completed, completing, completeError, onComplete 
         </div>
       )}
 
-      <h1 className="text-2xl font-bold text-titi-dark mb-3">
+      <h1 className="text-xl sm:text-2xl font-bold text-titi-dark mb-3">
         {leccion.titulo}
       </h1>
 
       {leccion.contenido ? (
-        <div className="text-base text-gray-600 leading-relaxed whitespace-pre-line mb-8">
+        <div className="text-sm sm:text-base text-gray-600 leading-relaxed whitespace-pre-line mb-6 sm:mb-8">
           {leccion.contenido}
         </div>
       ) : (

@@ -60,10 +60,10 @@ export default function Courses() {
   const hasFilters = debouncedQuery || nivel !== 'all';
 
   return (
-    <div className="bg-titi-cream min-h-full">
+    <div>
       {/* Header */}
-      <header className="mb-8">
-        <h1 className="text-3xl font-extrabold text-titi-dark mb-1">
+      <header className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark mb-1">
           Catálogo de Cursos
         </h1>
         <p className="text-sm font-medium text-gray-500">
@@ -72,7 +72,7 @@ export default function Courses() {
       </header>
 
       {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-8">
+      <div className="flex flex-col sm:flex-row gap-3 mb-6 sm:mb-8">
         {/* Search */}
         <div className="relative flex-1">
           <input
@@ -154,7 +154,7 @@ export default function Courses() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {cursos.map((curso) => (
               <CourseCard
                 key={curso.id}
@@ -255,7 +255,7 @@ function CourseCard({ curso, onOpen }) {
 // ---- Skeleton (sección 8 del DESIGN.md) ----
 function SkeletonGrid() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
       {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
