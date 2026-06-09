@@ -45,6 +45,21 @@ const PinIcon = ({ className }) => (
   </svg>
 );
 
+const BookmarkIcon = ({ filled, className }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill={filled ? 'currentColor' : 'none'}
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
 function ContentWithHashtags({ text }) {
   if (!text) return null;
   const parts = [];
@@ -71,6 +86,8 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
   const [likes, setLikes] = useState(post.likes ?? 0);
   const [likedByMe, setLikedByMe] = useState(Boolean(post.likedByMe));
   const [liking, setLiking] = useState(false);
+  const [savedByMe, setSavedByMe] = useState(Boolean(post.savedByMe));
+  const [saving, setSaving] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(post.comments ?? 0);
 
@@ -96,6 +113,26 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
       setLikedByMe(prevLiked); setLikes(prevLikes);
     } finally {
       setLiking(false);
+    }
+  }
+
+  async function toggleSave() {
+    if (!isAuthenticated || saving) return;
+    const prevSaved = savedByMe;
+    setSavedByMe(!prevSaved);
+    setSaving(true);
+    try {
+      const { data } = await client.post(`/api/posts/${post.id}/save`);
+      if (data?.success) {
+        setSavedByMe(Boolean(data.data.saved));
+        onChange?.({ id: post.id, saved: data.data.saved });
+      } else {
+        setSavedByMe(prevSaved);
+      }
+    } catch {
+      setSavedByMe(prevSaved);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -201,6 +238,22 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
         >
           <CommentIcon className="w-5 h-5" />
           <span className="text-sm tabular-nums">{commentCount}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleSave}
+          disabled={!isAuthenticated || saving}
+          aria-pressed={savedByMe}
+          aria-label={savedByMe ? 'Quitar de guardados' : 'Guardar post'}
+          className={`ml-auto flex items-center gap-2 px-3 py-1.5 rounded-full font-bold transition-all ${
+            savedByMe
+              ? 'text-titi-yellow-dark bg-titi-yellow-light scale-105'
+              : 'text-titi-muted hover:bg-titi-bg hover:text-titi-yellow-dark'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          <BookmarkIcon filled={savedByMe} className="w-5 h-5" />
+          <span className="text-sm">{savedByMe ? 'Guardado' : 'Guardar'}</span>
         </button>
       </footer>
 

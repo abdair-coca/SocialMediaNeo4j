@@ -51,6 +51,7 @@ function serializePost(record) {
     likes: toNumber(record.get('likes')),
     comments: hasNullable('comments') ? toNumber(record.get('comments')) : 0,
     likedByMe: hasNullable('likedByMe') ? Boolean(record.get('likedByMe')) : false,
+    savedByMe: hasNullable('savedByMe') ? Boolean(record.get('savedByMe')) : false,
     sound: soundNode
       ? { id: soundNode.properties.id, name: soundNode.properties.name, artist: soundNode.properties.artist }
       : null,
@@ -70,12 +71,14 @@ const POST_QUERY_TAIL = `
        collect(DISTINCT h.name) as hashtags,
        count(DISTINCT liker) as likes,
        count(DISTINCT c) as comments
-  OPTIONAL MATCH (p)<-[myLike:LE_GUSTO]-(me:Usuario {id: $userId})
+  OPTIONAL MATCH (p)<-[myLike:LE_GUSTO]-(:Usuario {id: $userId})
+  OPTIONAL MATCH (p)<-[mySaved:GUARDO]-(:Usuario {id: $userId})
   RETURN p,
          u.username as author,
          u.avatarUrl as authorAvatar,
          hashtags, likes, comments,
          myLike IS NOT NULL as likedByMe,
+         mySaved IS NOT NULL as savedByMe,
          sound, location
 `;
 
@@ -111,6 +114,76 @@ router.get('/explore', optionalAuth, async (req, res) => {
   } catch (err) {
     console.error('GET /explore error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo explore' });
+  }
+});
+
+// ---- Posts guardados por mí (orden: cuándo los guardé) ----
+router.get('/me/saved', requireAuth, async (req, res) => {
+  try {
+    const records = await runQuery(
+      `MATCH (:Usuario {id: $userId})-[s:GUARDO]->(p:Post)<-[:PUBLICO]-(u:Usuario)
+       WITH p, u, s.savedAt as savedAt
+       OPTIONAL MATCH (p)<-[:LE_GUSTO]-(liker:Usuario)
+       OPTIONAL MATCH (c:Comentario)-[:EN]->(p)
+       OPTIONAL MATCH (p)-[:TIENE_HASHTAG]->(h:Hashtag)
+       OPTIONAL MATCH (p)-[:USA_SONIDO]->(sound:Sonido)
+       OPTIONAL MATCH (p)-[:ETIQUETADO_EN]->(location:Ubicacion)
+       WITH p, u, sound, location, savedAt,
+            collect(DISTINCT h.name) as hashtags,
+            count(DISTINCT liker) as likes,
+            count(DISTINCT c) as comments
+       OPTIONAL MATCH (p)<-[myLike:LE_GUSTO]-(:Usuario {id: $userId})
+       OPTIONAL MATCH (p)<-[mySaved:GUARDO]-(:Usuario {id: $userId})
+       RETURN p,
+              u.username as author,
+              u.avatarUrl as authorAvatar,
+              hashtags, likes, comments,
+              myLike IS NOT NULL as likedByMe,
+              mySaved IS NOT NULL as savedByMe,
+              sound, location
+       ORDER BY savedAt DESC, p.createdAt DESC
+       LIMIT 50`,
+      { userId: req.user.id }
+    );
+    res.json({ success: true, data: { posts: records.map(serializePost) } });
+  } catch (err) {
+    console.error('GET /me/saved error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo posts guardados' });
+  }
+});
+
+// ---- Posts a los que di like (orden: cuándo di like) ----
+router.get('/me/liked', requireAuth, async (req, res) => {
+  try {
+    const records = await runQuery(
+      `MATCH (:Usuario {id: $userId})-[l:LE_GUSTO]->(p:Post)<-[:PUBLICO]-(u:Usuario)
+       WITH p, u, l.likedAt as likedAt
+       OPTIONAL MATCH (p)<-[:LE_GUSTO]-(liker:Usuario)
+       OPTIONAL MATCH (c:Comentario)-[:EN]->(p)
+       OPTIONAL MATCH (p)-[:TIENE_HASHTAG]->(h:Hashtag)
+       OPTIONAL MATCH (p)-[:USA_SONIDO]->(sound:Sonido)
+       OPTIONAL MATCH (p)-[:ETIQUETADO_EN]->(location:Ubicacion)
+       WITH p, u, sound, location, likedAt,
+            collect(DISTINCT h.name) as hashtags,
+            count(DISTINCT liker) as likes,
+            count(DISTINCT c) as comments
+       OPTIONAL MATCH (p)<-[myLike:LE_GUSTO]-(:Usuario {id: $userId})
+       OPTIONAL MATCH (p)<-[mySaved:GUARDO]-(:Usuario {id: $userId})
+       RETURN p,
+              u.username as author,
+              u.avatarUrl as authorAvatar,
+              hashtags, likes, comments,
+              myLike IS NOT NULL as likedByMe,
+              mySaved IS NOT NULL as savedByMe,
+              sound, location
+       ORDER BY likedAt DESC, p.createdAt DESC
+       LIMIT 50`,
+      { userId: req.user.id }
+    );
+    res.json({ success: true, data: { posts: records.map(serializePost) } });
+  } catch (err) {
+    console.error('GET /me/liked error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo posts con like' });
   }
 });
 
@@ -220,7 +293,9 @@ router.post('/:id/like', requireAuth, async (req, res) => {
     } else {
       await runQuery(
         `MATCH (u:Usuario {id: $userId}), (p:Post {id: $id})
-         MERGE (u)-[:LE_GUSTO]->(p)`,
+         MERGE (u)-[r:LE_GUSTO]->(p)
+         ON CREATE SET r.likedAt = datetime()
+         ON MATCH SET r.likedAt = coalesce(r.likedAt, datetime())`,
         { userId: req.user.id, id }
       );
       liked = true;
@@ -305,6 +380,48 @@ router.put('/:id', requireAuth, async (req, res) => {
     res.status(500).json({ success: false, message: 'Error editando post' });
   }
 });
+// ---- Guardar post (toggle) ----
+router.post('/:id/save', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const exists = await runQuery(
+      'MATCH (p:Post {id: $id}) RETURN p LIMIT 1',
+      { id }
+    );
+    if (exists.length === 0) {
+      return res.status(404).json({ success: false, message: 'Post no encontrado' });
+    }
+
+    const existing = await runQuery(
+      `MATCH (:Usuario {id: $userId})-[r:GUARDO]->(:Post {id: $id}) RETURN r LIMIT 1`,
+      { userId: req.user.id, id }
+    );
+
+    let saved;
+    if (existing.length > 0) {
+      await runQuery(
+        `MATCH (:Usuario {id: $userId})-[r:GUARDO]->(:Post {id: $id}) DELETE r`,
+        { userId: req.user.id, id }
+      );
+      saved = false;
+    } else {
+      await runQuery(
+        `MATCH (u:Usuario {id: $userId}), (p:Post {id: $id})
+         MERGE (u)-[r:GUARDO]->(p)
+         ON CREATE SET r.savedAt = datetime()
+         ON MATCH SET r.savedAt = coalesce(r.savedAt, datetime())`,
+        { userId: req.user.id, id }
+      );
+      saved = true;
+    }
+
+    return res.json({ success: true, data: { saved } });
+  } catch (err) {
+    console.error('POST /save error', err);
+    res.status(500).json({ success: false, message: 'Error al guardar post' });
+  }
+});
 
 // ---- Eliminar post ----
 router.delete('/:id', requireAuth, async (req, res) => {
@@ -333,7 +450,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     const imageUrl = records[0].get('imageUrl');
     if (imageUrl && imageUrl.startsWith('/uploads/')) {
       const filePath = path.join(uploadsDir, path.basename(imageUrl));
-      fs.promises.unlink(filePath).catch(() => {});
+      fs.promises.unlink(filePath).catch(() => { });
     }
 
     res.json({ success: true, data: { deleted: id } });

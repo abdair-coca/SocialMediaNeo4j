@@ -19,9 +19,21 @@ export default function Profile() {
   const [followBusy, setFollowBusy] = useState(false);
   const [isSelf, setIsSelf] = useState(false);
 
+  const [tab, setTab] = useState('posts'); // 'posts' | 'saved' | 'liked'
+
   const [posts, setPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [postsError, setPostsError] = useState(null);
+
+  const [saved, setSaved] = useState([]);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [savedError, setSavedError] = useState(null);
+  const [savedLoaded, setSavedLoaded] = useState(false);
+
+  const [liked, setLiked] = useState([]);
+  const [likedLoading, setLikedLoading] = useState(false);
+  const [likedError, setLikedError] = useState(null);
+  const [likedLoaded, setLikedLoaded] = useState(false);
 
   const fetchUserPosts = useCallback(async () => {
     setPostsLoading(true); setPostsError(null);
@@ -42,7 +54,54 @@ export default function Profile() {
     }
   }, [username]);
 
+  const fetchSaved = useCallback(async () => {
+    setSavedLoading(true); setSavedError(null);
+    try {
+      const { data } = await client.get('/api/posts/me/saved');
+      if (data?.success) {
+        setSaved(data.data.posts || []);
+      } else {
+        setSavedError(data?.message || 'No se pudieron cargar los guardados');
+      }
+    } catch (err) {
+      setSavedError(err.response?.data?.message || err.message || 'Error de red');
+    } finally {
+      setSavedLoading(false);
+      setSavedLoaded(true);
+    }
+  }, []);
+
+  const fetchLiked = useCallback(async () => {
+    setLikedLoading(true); setLikedError(null);
+    try {
+      const { data } = await client.get('/api/posts/me/liked');
+      if (data?.success) {
+        setLiked(data.data.posts || []);
+      } else {
+        setLikedError(data?.message || 'No se pudieron cargar los likes');
+      }
+    } catch (err) {
+      setLikedError(err.response?.data?.message || err.message || 'Error de red');
+    } finally {
+      setLikedLoading(false);
+      setLikedLoaded(true);
+    }
+  }, []);
+
   useEffect(() => { fetchUserPosts(); }, [fetchUserPosts]);
+
+  useEffect(() => {
+    if (!isSelf) return;
+    if (tab === 'saved' && !savedLoaded && !savedLoading) fetchSaved();
+    if (tab === 'liked' && !likedLoaded && !likedLoading) fetchLiked();
+  }, [tab, isSelf, savedLoaded, savedLoading, likedLoaded, likedLoading, fetchSaved, fetchLiked]);
+
+  // Reset tabs cache cuando cambia de perfil
+  useEffect(() => {
+    setTab('posts');
+    setSaved([]); setSavedLoaded(false); setSavedError(null);
+    setLiked([]); setLikedLoaded(false); setLikedError(null);
+  }, [username]);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true); setError(null);
@@ -109,6 +168,8 @@ export default function Profile() {
 
   function handleDeletePost(postId) {
     setPosts(prev => prev.filter(p => p.id !== postId));
+    setSaved(prev => prev.filter(p => p.id !== postId));
+    setLiked(prev => prev.filter(p => p.id !== postId));
     setProfile(prev => ({
       ...prev,
       stats: { ...prev.stats, postCount: Math.max(0, prev.stats.postCount - 1) },
@@ -116,7 +177,22 @@ export default function Profile() {
   }
 
   function handleEditPost(updated) {
-    setPosts(prev => prev.map(p => (p.id === updated.id ? { ...p, ...updated } : p)));
+    const apply = (p) => (p.id === updated.id ? { ...p, ...updated } : p);
+    setPosts(prev => prev.map(apply));
+    setSaved(prev => prev.map(apply));
+    setLiked(prev => prev.map(apply));
+  }
+
+  function handlePostChange(change) {
+    if (!change) return;
+    // Si se desguarda un post desde la lista de guardados, lo sacamos
+    if (change.saved === false) {
+      setSaved(prev => prev.filter(p => p.id !== change.id));
+    }
+    // Si se quita el like desde la lista de likes, lo sacamos
+    if (change.liked === false) {
+      setLiked(prev => prev.filter(p => p.id !== change.id));
+    }
   }
 
   return (
@@ -190,44 +266,156 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Posts del usuario */}
-      <section aria-label={`Posts de @${user.username}`}>
-        <h2 className="text-2xl font-extrabold mb-4 px-1 text-titi-text">
-          Posts de @{user.username}
-        </h2>
-
-        {postsLoading && (
-          <div className="titi-card p-6 text-center text-titi-muted font-semibold">Cargando…</div>
+      {/* Tabs */}
+      <div
+        role="tablist"
+        aria-label="Secciones del perfil"
+        className="flex gap-2 mb-5 border-b-2 border-titi-border px-1"
+      >
+        <TabButton
+          active={tab === 'posts'}
+          onClick={() => setTab('posts')}
+          icon={<GridIcon className="w-4 h-4" />}
+          label="Posts"
+          count={stats.postCount}
+        />
+        {isSelf && (
+          <>
+            <TabButton
+              active={tab === 'saved'}
+              onClick={() => setTab('saved')}
+              icon={<BookmarkIcon className="w-4 h-4" filled={tab === 'saved'} />}
+              label="Guardados"
+              count={savedLoaded ? saved.length : null}
+            />
+            <TabButton
+              active={tab === 'liked'}
+              onClick={() => setTab('liked')}
+              icon={<HeartIcon className="w-4 h-4" filled={tab === 'liked'} />}
+              label="Likes"
+              count={likedLoaded ? liked.length : null}
+            />
+          </>
         )}
+      </div>
 
-        {postsError && (
-          <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
-            <p className="text-sm text-titi-red font-bold mb-3">{postsError}</p>
-            <button onClick={fetchUserPosts} className="titi-btn-primary">Reintentar</button>
-          </div>
-        )}
+      {/* Contenido del tab activo */}
+      {tab === 'posts' && (
+        <section aria-label={`Posts de @${user.username}`} role="tabpanel">
+          <PostsList
+            loading={postsLoading}
+            error={postsError}
+            posts={posts}
+            onRetry={fetchUserPosts}
+            emptyTitle={isSelf ? 'Todavía no publicaste nada' : `@${user.username} no ha publicado nada todavía`}
+            emptyDescription={isSelf ? '¡Comparte tu primer post para que aparezca aquí!' : 'Vuelve más tarde para ver novedades.'}
+            handleDelete={handleDeletePost}
+            handleEdit={handleEditPost}
+            onChange={handlePostChange}
+          />
+        </section>
+      )}
 
-        {!postsLoading && !postsError && posts.length === 0 && (
-          <div className="titi-card p-8 text-center">
-            <p className="text-titi-muted font-semibold">
-              @{user.username} no ha publicado nada todavía.
-            </p>
-          </div>
-        )}
+      {tab === 'saved' && isSelf && (
+        <section aria-label="Posts guardados" role="tabpanel">
+          <PostsList
+            loading={savedLoading}
+            error={savedError}
+            posts={saved}
+            onRetry={fetchSaved}
+            emptyTitle="No tienes posts guardados"
+            emptyDescription="Cuando guardes un post aparecerá aquí para que lo encuentres rápido."
+            handleDelete={handleDeletePost}
+            handleEdit={handleEditPost}
+            onChange={handlePostChange}
+          />
+        </section>
+      )}
 
-        {!postsLoading && !postsError && posts.length > 0 && (
-          <div className="space-y-4">
-            {posts.map((p) => (
-              <PostCard
-                key={p.id}
-                post={p}
-                onDelete={handleDeletePost}
-                onEdit={handleEditPost}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      {tab === 'liked' && isSelf && (
+        <section aria-label="Posts con like" role="tabpanel">
+          <PostsList
+            loading={likedLoading}
+            error={likedError}
+            posts={liked}
+            onRetry={fetchLiked}
+            emptyTitle="Aún no diste like a ningún post"
+            emptyDescription="Los posts a los que des like aparecerán aquí, ordenados por fecha."
+            handleDelete={handleDeletePost}
+            handleEdit={handleEditPost}
+            onChange={handlePostChange}
+          />
+        </section>
+      )}
+    </div>
+  );
+}
+
+function TabButton({ active, onClick, icon, label, count }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`flex items-center gap-2 px-4 py-2.5 -mb-0.5 font-bold text-sm rounded-t-xl transition-all ${
+        active
+          ? 'text-titi-dark bg-titi-yellow-light border-b-2 border-titi-yellow'
+          : 'text-titi-muted hover:text-titi-dark hover:bg-titi-bg'
+      }`}
+    >
+      {icon}
+      <span>{label}</span>
+      {typeof count === 'number' && (
+        <span className={`text-xs tabular-nums px-2 py-0.5 rounded-full font-extrabold ${
+          active ? 'bg-titi-yellow text-titi-dark' : 'bg-titi-border text-titi-muted'
+        }`}>
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function PostsList({ loading, error, posts, onRetry, emptyTitle, emptyDescription, handleDelete, handleEdit, onChange }) {
+  if (loading) {
+    return (
+      <div className="titi-card p-6 text-center text-titi-muted font-semibold">Cargando…</div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
+        <p className="text-sm text-titi-red font-bold mb-3">{error}</p>
+        <button onClick={onRetry} className="titi-btn-primary">Reintentar</button>
+      </div>
+    );
+  }
+  if (posts.length === 0) {
+    return (
+      <div className="titi-card p-8 text-center flex flex-col items-center">
+        <img
+          src="/Titi.png"
+          alt="Titi"
+          className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
+          draggable={false}
+        />
+        <h3 className="text-xl font-bold text-titi-dark mb-2">{emptyTitle}</h3>
+        <p className="text-sm text-titi-muted max-w-xs">{emptyDescription}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-4">
+      {posts.map((p) => (
+        <PostCard
+          key={p.id}
+          post={p}
+          onDelete={handleDelete}
+          onEdit={handleEdit}
+          onChange={onChange}
+        />
+      ))}
     </div>
   );
 }
@@ -244,6 +432,39 @@ const HeartIcon = ({ filled, className }) => (
     aria-hidden="true"
   >
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+);
+
+const BookmarkIcon = ({ filled, className }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill={filled ? 'currentColor' : 'none'}
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+const GridIcon = ({ className }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="3" width="7" height="7" />
+    <rect x="14" y="3" width="7" height="7" />
+    <rect x="3" y="14" width="7" height="7" />
+    <rect x="14" y="14" width="7" height="7" />
   </svg>
 );
 
