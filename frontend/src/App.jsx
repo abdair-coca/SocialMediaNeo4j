@@ -19,6 +19,9 @@ import Courses from './pages/Courses.jsx'
 import CourseDetail from './pages/CourseDetail.jsx'
 import MyCourses from './pages/MyCourses.jsx'
 import LearnCourse from './pages/LearnCourse.jsx'
+import MyTeaching from './pages/teacher/MyTeaching.jsx'
+import CourseEditor from './pages/teacher/CourseEditor.jsx'
+import ModulesEditor from './pages/teacher/ModulesEditor.jsx'
 
 // ---- Layouts ----
 
@@ -110,6 +113,10 @@ export default function App() {
         <Route path="/courses/:id" element={<CourseDetail />} />
         <Route path="/my-courses" element={<MyCourses />} />
         <Route path="/courses/:id/learn" element={<LearnCourse />} />
+        <Route path="/teacher" element={<MyTeaching />} />
+        <Route path="/teacher/courses/new" element={<CourseEditor />} />
+        <Route path="/teacher/courses/:id/edit" element={<CourseEditor />} />
+        <Route path="/teacher/courses/:id/modules" element={<ModulesEditor />} />
       </Route>
 
       {/* 404 */}

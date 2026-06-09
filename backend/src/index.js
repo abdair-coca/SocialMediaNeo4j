@@ -19,6 +19,7 @@ import moduleRoutes from './routes/modules.js'
 import lessonRoutes from './routes/lessons.js'
 import materialRoutes from './routes/materials.js'
 import categoryRoutes from './routes/categories.js'
+import progressRoutes from './routes/progress.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -72,6 +73,7 @@ app.use('/api', moduleRoutes)
 app.use('/api', lessonRoutes)
 app.use('/api', materialRoutes)
 app.use('/api/categories', categoryRoutes)
+app.use('/api/progress', progressRoutes)
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Ruta no encontrada' });

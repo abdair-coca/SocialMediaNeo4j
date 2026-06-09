@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
+import { actualizarRacha } from '../services/progress.service.js';
 
 const router = Router();
 
@@ -198,7 +199,6 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
     const usuario = await loadCurrentUser(req, res);
     if (!usuario) return;
 
-    // Verifica que la lección exista para evitar progresos huérfanos
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
       select: { id: true },
@@ -207,17 +207,16 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
 
+    // ¿Era la primera vez que la completa? Sólo en ese caso actualizamos la racha.
+    const previo = await prisma.progreso.findUnique({
+      where: { usuarioId_leccionId: { usuarioId: usuario.id, leccionId: leccion.id } },
+      select: { completada: true },
+    });
+    const primeraVez = !previo?.completada;
+
     const progreso = await prisma.progreso.upsert({
-      where: {
-        usuarioId_leccionId: {
-          usuarioId: usuario.id,
-          leccionId: leccion.id,
-        },
-      },
-      update: {
-        completada: true,
-        fechaCompletado: new Date(),
-      },
+      where: { usuarioId_leccionId: { usuarioId: usuario.id, leccionId: leccion.id } },
+      update: { completada: true, fechaCompletado: new Date() },
       create: {
         usuarioId: usuario.id,
         leccionId: leccion.id,
@@ -226,7 +225,19 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
       },
     });
 
-    res.json({ success: true, data: { progreso } });
+    let racha = null;
+    if (primeraVez) {
+      racha = await actualizarRacha(usuario.id);
+    } else {
+      racha = {
+        racha: usuario.racha,
+        subio: false,
+        ultimaActividad: usuario.ultimaActividad,
+        rota: false,
+      };
+    }
+
+    res.json({ success: true, data: { progreso, primeraVez, racha } });
   } catch (err) {
     console.error('POST /api/lessons/:id/complete error', err);
     res.status(500).json({ success: false, message: 'Error marcando lección como completada' });

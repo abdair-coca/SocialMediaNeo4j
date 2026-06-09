@@ -5,10 +5,13 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { formatDate, relativeTime, resolveMediaUrl } from '../lib/format.js';
 import OptionsPosts from '../components/OptionsPosts.jsx';
 import PostCard from '../components/PostCard.jsx';
+import StreakBadge from '../components/StreakBadge.jsx';
+import useStreak from '../hooks/useStreak.js';
 
 export default function Profile() {
   const { username } = useParams();
   const { isAuthenticated } = useAuth();
+  const streak = useStreak();
 
   const [profile, setProfile] = useState(null);
   const [location, setLocation] = useState(null);
@@ -257,6 +260,17 @@ export default function Profile() {
             )}
           </div>
         </div>
+
+        {/* Racha — solo para mi propio perfil */}
+        {isSelf && (
+          <div className="mt-6">
+            <StreakBadge
+              variant="hero"
+              racha={streak.racha}
+              estaActiva={streak.estaActiva}
+            />
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-titi-border">

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import client from '../api/client.js';
+import StreakBadge from './StreakBadge.jsx';
+import useStreak from '../hooks/useStreak.js';
 
 // ---- Iconos inline ----
 const Icon = {
@@ -46,6 +48,12 @@ const Icon = {
       <circle cx="12" cy="12" r="9" />
       <circle cx="12" cy="12" r="5" />
       <circle cx="12" cy="12" r="1.5" />
+    </svg>
+  ),
+  Cap: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M22 10 12 4 2 10l10 6 10-6z" />
+      <path d="M6 12v5c3 2 9 2 12 0v-5" />
     </svg>
   ),
 };
@@ -103,7 +111,7 @@ function sidebarItemClass({ isActive }) {
     : `${base} text-white/85 hover:bg-white/10 hover:text-white`;
 }
 
-function Sidebar({ user, onLogout, unread }) {
+function Sidebar({ user, onLogout, unread, streak }) {
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-titi-dark border-r border-titi-dark flex-col z-20 text-white">
       <Link to="/feed" className="block px-6 py-6 border-b border-white/10">
@@ -127,6 +135,12 @@ function Sidebar({ user, onLogout, unread }) {
           <Icon.Target className="w-5 h-5" />
           <span>Mis cursos</span>
         </NavLink>
+        {(user?.rol === 'PROFESOR' || user?.rol === 'ADMIN') && (
+          <NavLink to="/teacher" className={sidebarItemClass}>
+            <Icon.Cap className="w-5 h-5" />
+            <span>Enseñar</span>
+          </NavLink>
+        )}
         <NavLink to="/notifications" className={sidebarItemClass}>
           <span className="relative inline-flex">
             <Icon.Bell className="w-5 h-5" />
@@ -142,13 +156,13 @@ function Sidebar({ user, onLogout, unread }) {
         )}
       </nav>
 
-      {user?.racha > 0 && (
-        <div className="px-4 py-3 mx-1 bg-titi-dark-mid rounded-xl flex items-center gap-3">
-          <span className="text-2xl">🔥</span>
-          <div>
-            <p className="text-white font-black text-lg leading-none">{user.racha}</p>
-            <p className="text-gray-400 text-xs font-medium">días seguidos</p>
-          </div>
+      {user && (
+        <div className="px-3 pb-3">
+          <StreakBadge
+            variant="sidebar"
+            racha={streak.racha}
+            estaActiva={streak.estaActiva}
+          />
         </div>
       )}
       <div className="border-t border-white/10 p-3 space-y-2">
@@ -188,14 +202,26 @@ function Sidebar({ user, onLogout, unread }) {
 }
 
 // ---- Top bar móvil ----
-function MobileTopBar({ onLogout, unread }) {
+function MobileTopBar({ onLogout, unread, streak, showStreak }) {
   return (
     <header className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-titi-dark text-white border-b border-titi-dark shadow-titi">
       <div className="h-full px-4 flex items-center justify-between gap-2">
         <Link to="/feed">
           <TitiLogo size="md" />
         </Link>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {showStreak && (
+            <Link
+              to="/my-courses"
+              aria-label={`Racha de ${streak.racha} días`}
+              className="inline-flex items-center gap-1 bg-titi-dark-mid border border-titi-streak/30 px-2.5 py-1 rounded-full"
+            >
+              <MiniFlame active={streak.estaActiva && streak.racha > 0} />
+              <span className="text-sm font-black text-titi-streak tabular-nums leading-none">
+                {streak.racha}
+              </span>
+            </Link>
+          )}
           <Link
             to="/notifications"
             aria-label="Notificaciones"
@@ -215,6 +241,23 @@ function MobileTopBar({ onLogout, unread }) {
         </div>
       </div>
     </header>
+  );
+}
+
+function MiniFlame({ active }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className={active ? 'titi-flame-flicker' : ''}>
+      <defs>
+        <linearGradient id="mini-flame-g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={active ? '#FF9A3C' : '#9CA3AF'} />
+          <stop offset="100%" stopColor={active ? '#D9480F' : '#4B5563'} />
+        </linearGradient>
+      </defs>
+      <path
+        d="M12 2c.6 3.4 3.5 4.8 3.5 8.5 0 1.6-.6 2.8-1.5 3.6.4-1.5.1-3-1-4.3 0 2.2-1 3.6-2 4.5-1.8 1.6-2.5 3.3-2.5 5 0 3.3 2.5 4.7 5.5 4.7s5.5-1.4 5.5-4.7c0-5.6-7.5-7.4-7.5-17.3z"
+        fill="url(#mini-flame-g)"
+      />
+    </svg>
   );
 }
 
@@ -266,6 +309,7 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const unread = useUnreadNotifications();
+  const streak = useStreak();
 
   function handleLogout() {
     logout();
@@ -274,8 +318,13 @@ export default function Navbar() {
 
   return (
     <>
-      <Sidebar user={user} onLogout={handleLogout} unread={unread} />
-      <MobileTopBar onLogout={handleLogout} unread={unread} />
+      <Sidebar user={user} onLogout={handleLogout} unread={unread} streak={streak} />
+      <MobileTopBar
+        onLogout={handleLogout}
+        unread={unread}
+        streak={streak}
+        showStreak={Boolean(user)}
+      />
       <MobileBottomNav user={user} />
     </>
   );

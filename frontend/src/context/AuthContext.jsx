@@ -59,6 +59,12 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('user');
   }, []);
 
+  // Merge parcial al usuario (útil para actualizar racha sin re-fetch)
+  const updateUser = useCallback((partial) => {
+    if (!partial) return;
+    setUser((prev) => (prev ? { ...prev, ...partial } : prev));
+  }, []);
+
   // Refresca perfil propio desde /api/users/me (útil si user en localStorage está stale)
   const refreshMe = useCallback(async () => {
     if (!token) return null;
@@ -83,6 +89,7 @@ export function AuthProvider({ children }) {
     register,
     logout,
     refreshMe,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

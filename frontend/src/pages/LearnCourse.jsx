@@ -3,12 +3,16 @@ import { useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import LessonComments from '../components/LessonComments.jsx';
+import StreakToast from '../components/StreakToast.jsx';
 import { resolveMediaUrl } from '../lib/format.js';
 
 export default function LearnCourse() {
   const { id: courseId } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, updateUser } = useAuth();
+
+  // Toast de racha
+  const [streakToast, setStreakToast] = useState({ shown: false, racha: 0 });
 
   const [curso, setCurso] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -199,6 +203,14 @@ export default function LearnCourse() {
           next.add(activeId);
           return next;
         });
+        // Propagar la racha actualizada al AuthContext y disparar toast si subió
+        const r = data.data?.racha;
+        if (r) {
+          updateUser({ racha: r.racha });
+          if (r.subio) {
+            setStreakToast({ shown: true, racha: r.racha });
+          }
+        }
       } else {
         setCompleteError(
           data?.message || 'No se pudo marcar la lección como completada',
@@ -252,6 +264,11 @@ export default function LearnCourse() {
 
   return (
     <div className="flex min-h-screen bg-titi-cream">
+      <StreakToast
+        shown={streakToast.shown}
+        racha={streakToast.racha}
+        onDone={() => setStreakToast({ shown: false, racha: 0 })}
+      />
       {/* === Sidebar de lecciones (desktop) + drawer (móvil) === */}
       <aside
         className={`
