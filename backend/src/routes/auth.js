@@ -59,19 +59,24 @@ router.post('/register', async (req, res) => {
     );
 
     // Espejo en PostgreSQL — no debe romper el registro si falla.
+    let pgUser = null;
     try {
-      await prisma.usuario.create({
+      pgUser = await prisma.usuario.create({
         data: {
           neoId: id,
           username,
           email,
         },
+        select: { rol: true, racha: true },
       });
     } catch (pgErr) {
       console.error('register: error replicando usuario en PostgreSQL', pgErr);
     }
 
     const user = publicUser(records[0].get('u'));
+    user.rol = pgUser?.rol ?? 'ESTUDIANTE';
+    user.racha = pgUser?.racha ?? 0;
+
     const token = signToken(user);
     res.status(201).json({ success: true, data: { user, token } });
   } catch (err) {
