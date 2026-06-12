@@ -29,4 +29,31 @@ router.get('/streak', requireAuth, async (req, res) => {
   }
 });
 
+router.get('/:username/streak', async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { username },
+      select: {
+        racha: true,
+        ultimaActividad: true,
+      },
+    });
+    if (!usuario) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+    res.json({
+      success: true,
+      data: {
+        racha: usuario.racha,
+        ultimaActividad: usuario.ultimaActividad,
+        estaActiva: rachaEstaActiva(usuario.ultimaActividad),
+      },
+    });
+  } catch (err) {
+    console.error('GET /progress/:username/streak error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo racha' });
+  }
+});
 export default router;

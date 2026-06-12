@@ -206,6 +206,7 @@ export default function LearnCourse() {
         // Propagar la racha actualizada al AuthContext y disparar toast si subió
         const r = data.data?.racha;
         if (r) {
+          console.log('Racha actualizada:', r);
           updateUser({ racha: r.racha });
           if (r.subio) {
             setStreakToast({ shown: true, racha: r.racha });

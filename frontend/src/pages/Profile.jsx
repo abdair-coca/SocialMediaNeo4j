@@ -11,6 +11,7 @@ import useStreak from '../hooks/useStreak.js';
 export default function Profile() {
   const { username } = useParams();
   const { isAuthenticated } = useAuth();
+  const [profileStreak, setProfileStreak] = useState(null);
   const streak = useStreak();
 
   const [profile, setProfile] = useState(null);
@@ -153,6 +154,33 @@ export default function Profile() {
     }
   }
 
+  const [rachaError, setRachaError] = useState(null);
+
+  const streakToast = useCallback(async () => {
+    if (isSelf) return;
+
+    try {
+      const { data } = await client.get(`/api/progress/${username}/streak`);
+
+      if (data?.success) {
+        setProfileStreak(data.data);
+      } else {
+        setRachaError(data?.message || 'No se pudo cargar la racha.');
+      }
+    } catch (err) {
+      setRachaError(
+        err.response?.data?.message ||
+        err.message ||
+        'Error de red'
+      );
+    }
+  }, [username, isSelf]);
+
+  useEffect(() => {
+    if (!isSelf) {
+      streakToast();
+    }
+  }, [isSelf, streakToast]);
   if (loading) return <ProfileSkeleton />;
 
   if (error) {
@@ -262,15 +290,15 @@ export default function Profile() {
         </div>
 
         {/* Racha — solo para mi propio perfil */}
-        {isSelf && (
-          <div className="mt-6">
-            <StreakBadge
-              variant="hero"
-              racha={streak.racha}
-              estaActiva={streak.estaActiva}
-            />
-          </div>
-        )}
+
+        <div className="mt-6">
+          <StreakBadge
+            variant="hero"
+            racha={isSelf ? streak.racha : profileStreak?.racha}
+            estaActiva={isSelf ? streak.estaActiva : profileStreak?.estaActiva}
+          />
+        </div>
+
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-titi-border">
@@ -372,18 +400,16 @@ function TabButton({ active, onClick, icon, label, count }) {
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2.5 -mb-0.5 font-bold text-sm rounded-t-xl transition-all ${
-        active
-          ? 'text-titi-dark bg-titi-yellow-light border-b-2 border-titi-yellow'
-          : 'text-titi-muted hover:text-titi-dark hover:bg-titi-bg'
-      }`}
+      className={`flex items-center gap-2 px-4 py-2.5 -mb-0.5 font-bold text-sm rounded-t-xl transition-all ${active
+        ? 'text-titi-dark bg-titi-yellow-light border-b-2 border-titi-yellow'
+        : 'text-titi-muted hover:text-titi-dark hover:bg-titi-bg'
+        }`}
     >
       {icon}
       <span>{label}</span>
       {typeof count === 'number' && (
-        <span className={`text-xs tabular-nums px-2 py-0.5 rounded-full font-extrabold ${
-          active ? 'bg-titi-yellow text-titi-dark' : 'bg-titi-border text-titi-muted'
-        }`}>
+        <span className={`text-xs tabular-nums px-2 py-0.5 rounded-full font-extrabold ${active ? 'bg-titi-yellow text-titi-dark' : 'bg-titi-border text-titi-muted'
+          }`}>
           {count}
         </span>
       )}
