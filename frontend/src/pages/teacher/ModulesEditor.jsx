@@ -304,6 +304,13 @@ export default function ModulesEditor() {
           </button>
           <button
             type="button"
+            onClick={() => navigate(`/teacher/courses/${courseId}/final-evaluation`)}
+            className="bg-white text-titi-achievement font-semibold text-sm px-4 py-2 rounded-xl border border-titi-achievement/30 hover:bg-purple-50"
+          >
+            🏁 Evaluación final
+          </button>
+          <button
+            type="button"
             onClick={togglePublish}
             disabled={busy || (!canPublish && !curso.publicado)}
             className="bg-titi-yellow text-titi-dark font-bold text-sm px-5 py-2.5 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -350,6 +357,7 @@ export default function ModulesEditor() {
                   })
                 }
                 onAddLesson={() => addLesson(m)}
+                onEditEvaluation={() => navigate(`/teacher/modules/${m.id}/evaluation`)}
                 onSelectLesson={setActiveLessonId}
                 onMoveLesson={(idxL, dir) => moveLesson(m.id, idxL, dir)}
                 onDeleteLesson={(l) =>
@@ -403,7 +411,7 @@ export default function ModulesEditor() {
 }
 
 // ---- Nodo de módulo (con sus lecciones) ----
-function ModuleNode({ modulo, index, total, activeLessonId, onMoveUp, onMoveDown, onUpdate, onDelete, onAddLesson, onSelectLesson, onMoveLesson, onDeleteLesson }) {
+function ModuleNode({ modulo, index, total, activeLessonId, onMoveUp, onMoveDown, onUpdate, onDelete, onAddLesson, onEditEvaluation, onSelectLesson, onMoveLesson, onDeleteLesson }) {
   const [editing, setEditing] = useState(false);
   const [titulo, setTitulo] = useState(modulo.titulo);
 
@@ -512,6 +520,15 @@ function ModuleNode({ modulo, index, total, activeLessonId, onMoveUp, onMoveDown
             className="w-full text-xs font-bold text-titi-dark bg-white border border-dashed border-titi-border hover:border-titi-yellow rounded-lg px-2 py-1.5 mt-1"
           >
             + Lección
+          </button>
+        </li>
+        <li>
+          <button
+            type="button"
+            onClick={onEditEvaluation}
+            className="w-full text-xs font-bold text-titi-achievement bg-white border border-dashed border-titi-achievement/40 hover:border-titi-achievement hover:bg-purple-50 rounded-lg px-2 py-1.5 mt-1"
+          >
+            📝 {modulo.evaluacion ? 'Editar evaluación' : 'Crear evaluación'}
           </button>
         </li>
       </ol>

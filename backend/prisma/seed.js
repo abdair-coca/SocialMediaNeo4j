@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import neo4j from 'neo4j-driver';
 import { randomUUID } from 'crypto';
 import 'dotenv/config';
+import { LOGROS_CATALOGO } from '../src/services/achievement.service.js';
 
 const prisma = new PrismaClient();
 const driver = neo4j.driver(
@@ -216,11 +217,84 @@ async function seedCursoDemo(profesor, categorias) {
   return curso;
 }
 
+async function seedLogros() {
+  console.log('→ Sembrando catálogo de logros...');
+  for (const l of LOGROS_CATALOGO) {
+    await prisma.logro.upsert({
+      where: { nombre: l.nombre },
+      update: { descripcion: l.descripcion, icono: l.icono, tipo: l.tipo, condicion: l.condicion },
+      create: l,
+    });
+  }
+  console.log(`  ✓ ${LOGROS_CATALOGO.length} logros listos`);
+}
+
+async function seedEvaluacionDemo(curso) {
+  console.log('→ Sembrando evaluación final demo...');
+  const existente = await prisma.evaluacion.findFirst({
+    where: { cursoId: curso.id, esFinal: true },
+  });
+  if (existente) {
+    console.log('  ✓ ya existía, no se toca');
+    return existente;
+  }
+
+  const evaluacion = await prisma.evaluacion.create({
+    data: {
+      titulo: 'Evaluación final — Introducción a Python',
+      cursoId: curso.id,
+      esFinal: true,
+      intentosMax: 3,
+      notaMinima: 70,
+      preguntas: {
+        create: [
+          {
+            texto: '¿Qué función se usa para imprimir texto en la consola?',
+            tipo: 'OPCION_MULTIPLE',
+            orden: 1,
+            opciones: {
+              create: [
+                { texto: 'print()', esCorrecta: true },
+                { texto: 'echo()', esCorrecta: false },
+                { texto: 'console.log()', esCorrecta: false },
+                { texto: 'write()', esCorrecta: false },
+              ],
+            },
+          },
+          {
+            texto: 'En Python, el valor `0` se evalúa como falsy.',
+            tipo: 'VERDADERO_FALSO',
+            orden: 2,
+            opciones: {
+              create: [
+                { texto: 'Verdadero', esCorrecta: true },
+                { texto: 'Falso', esCorrecta: false },
+              ],
+            },
+          },
+          {
+            texto: '¿Con qué palabra clave se define una función en Python?',
+            tipo: 'RESPUESTA_CORTA',
+            orden: 3,
+            opciones: {
+              create: [{ texto: 'def', esCorrecta: true }],
+            },
+          },
+        ],
+      },
+    },
+  });
+  console.log(`  ✓ evaluación final demo lista (id=${evaluacion.id})`);
+  return evaluacion;
+}
+
 async function main() {
   try {
     const categorias = await seedCategorias();
     const profesor = await seedProfesorDemo();
-    await seedCursoDemo(profesor, categorias);
+    const curso = await seedCursoDemo(profesor, categorias);
+    await seedLogros();
+    await seedEvaluacionDemo(curso);
     console.log('\n✓ Seed completado correctamente.');
     console.log('  Login del profesor demo:');
     console.log('    email:    profesor.demo@titi.local');

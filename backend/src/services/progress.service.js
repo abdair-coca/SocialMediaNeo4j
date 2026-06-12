@@ -1,4 +1,5 @@
 import prisma from '../prisma.js';
+import { otorgarLogro } from './achievement.service.js';
 
 function startOfDay(date) {
   const d = new Date(date);
@@ -61,6 +62,85 @@ export async function actualizarRacha(usuarioId) {
     data: { racha: 1, ultimaActividad: hoy },
   });
   return { racha: u.racha, subio: u.racha > rachaPrev, ultimaActividad: u.ultimaActividad, rota: true };
+}
+
+/**
+ * Verifica si el usuario completó el curso entero:
+ *  - tiene Inscripcion activa,
+ *  - todas las lecciones del curso con Progreso.completada,
+ *  - todas las evaluaciones del curso (de módulo y final) con al menos un Intento aprobado.
+ *
+ * Si recién se completa: marca Inscripcion.completado, emite Certificado
+ * (con guard manual de duplicados) y otorga el logro "Primer curso".
+ *
+ * @returns {Promise<{completado:boolean, nuevo?:boolean, certificado?:object, logros?:object[]}>}
+ */
+export async function checkCursoCompletado(usuarioId, cursoId) {
+  try {
+    const inscripcion = await prisma.inscripcion.findUnique({
+      where: { usuarioId_cursoId: { usuarioId, cursoId } },
+    });
+    if (!inscripcion) return { completado: false };
+
+    if (inscripcion.completado) {
+      const certificado = await prisma.certificado.findFirst({
+        where: { usuarioId, cursoId },
+      });
+      return { completado: true, nuevo: false, certificado, logros: [] };
+    }
+
+    const modulos = await prisma.modulo.findMany({
+      where: { cursoId },
+      select: {
+        lecciones: { select: { id: true } },
+        evaluacion: { select: { id: true } },
+      },
+    });
+    const leccionIds = modulos.flatMap((m) => m.lecciones.map((l) => l.id));
+    // Un curso sin lecciones no se puede "completar"
+    if (leccionIds.length === 0) return { completado: false };
+
+    const completadas = await prisma.progreso.count({
+      where: { usuarioId, leccionId: { in: leccionIds }, completada: true },
+    });
+    if (completadas < leccionIds.length) return { completado: false };
+
+    const evalIds = modulos.map((m) => m.evaluacion?.id).filter(Boolean);
+    const finales = await prisma.evaluacion.findMany({
+      where: { cursoId, esFinal: true },
+      select: { id: true },
+    });
+    evalIds.push(...finales.map((e) => e.id));
+
+    if (evalIds.length > 0) {
+      const aprobadas = await prisma.intento.groupBy({
+        by: ['evaluacionId'],
+        where: { usuarioId, evaluacionId: { in: evalIds }, aprobado: true },
+      });
+      if (aprobadas.length < evalIds.length) return { completado: false };
+    }
+
+    // Recién completado: marcar inscripción + emitir certificado + logro
+    await prisma.inscripcion.update({
+      where: { id: inscripcion.id },
+      data: { completado: true, fechaCompletado: new Date() },
+    });
+
+    let certificado = await prisma.certificado.findFirst({
+      where: { usuarioId, cursoId },
+    });
+    if (!certificado) {
+      certificado = await prisma.certificado.create({
+        data: { usuarioId, cursoId },
+      });
+    }
+
+    const logro = await otorgarLogro(usuarioId, 'Primer curso');
+    return { completado: true, nuevo: true, certificado, logros: logro ? [logro] : [] };
+  } catch (err) {
+    console.error('checkCursoCompletado error', err);
+    return { completado: false };
+  }
 }
 
 /**

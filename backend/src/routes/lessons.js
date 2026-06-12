@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
-import { actualizarRacha } from '../services/progress.service.js';
+import { actualizarRacha, checkCursoCompletado } from '../services/progress.service.js';
+import { checkLogrosLeccion } from '../services/achievement.service.js';
 
 const router = Router();
 
@@ -201,7 +202,7 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
 
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true },
+      select: { id: true, modulo: { select: { cursoId: true } } },
     });
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
@@ -226,8 +227,15 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
     });
 
     let racha = null;
+    let logros = [];
+    let cursoCompletado = null;
     if (primeraVez) {
       racha = await actualizarRacha(usuario.id);
+      logros = await checkLogrosLeccion(usuario.id, { racha: racha?.racha ?? 0 });
+      cursoCompletado = await checkCursoCompletado(usuario.id, leccion.modulo.cursoId);
+      if (cursoCompletado?.logros?.length) {
+        logros.push(...cursoCompletado.logros);
+      }
     } else {
       racha = {
         racha: usuario.racha,
@@ -237,7 +245,26 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
       };
     }
 
-    res.json({ success: true, data: { progreso, primeraVez, racha } });
+    res.json({
+      success: true,
+      data: {
+        progreso,
+        primeraVez,
+        racha,
+        logros,
+        cursoCompletado: cursoCompletado?.completado
+          ? {
+              nuevo: Boolean(cursoCompletado.nuevo),
+              certificado: cursoCompletado.certificado
+                ? {
+                    id: cursoCompletado.certificado.id,
+                    codigoVerif: cursoCompletado.certificado.codigoVerif,
+                  }
+                : null,
+            }
+          : null,
+      },
+    });
   } catch (err) {
     console.error('POST /api/lessons/:id/complete error', err);
     res.status(500).json({ success: false, message: 'Error marcando lección como completada' });

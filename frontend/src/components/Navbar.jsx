@@ -162,6 +162,7 @@ function Sidebar({ user, onLogout, unread, streak }) {
             variant="sidebar"
             racha={streak.racha}
             estaActiva={streak.estaActiva}
+            ultimaActividad={streak.ultimaActividad}
           />
         </div>
       )}

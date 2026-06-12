@@ -6,6 +6,7 @@ import { formatDate, relativeTime, resolveMediaUrl } from '../lib/format.js';
 import OptionsPosts from '../components/OptionsPosts.jsx';
 import PostCard from '../components/PostCard.jsx';
 import StreakBadge from '../components/StreakBadge.jsx';
+import AchievementsSection from '../components/AchievementsSection.jsx';
 import useStreak from '../hooks/useStreak.js';
 
 export default function Profile() {
@@ -296,6 +297,8 @@ export default function Profile() {
             variant="hero"
             racha={isSelf ? streak.racha : profileStreak?.racha}
             estaActiva={isSelf ? streak.estaActiva : profileStreak?.estaActiva}
+            ultimaActividad={isSelf ? streak.ultimaActividad : profileStreak?.ultimaActividad}
+            isSelf={isSelf}
           />
         </div>
 
@@ -307,6 +310,9 @@ export default function Profile() {
           <Stat label="Seguidos" value={stats.followingCount} color="text-titi-green" />
         </div>
       </div>
+
+      {/* Logros */}
+      <AchievementsSection username={username} isSelf={isSelf} />
 
       {/* Tabs */}
       <div

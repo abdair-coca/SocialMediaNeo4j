@@ -82,13 +82,22 @@ export default function MyCourses() {
   return (
     <div>
       {/* Header */}
-      <header className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark">
-          Mis cursos
-        </h1>
-        <p className="text-sm font-medium text-gray-500 mt-1">
-          Continuá donde lo dejaste
-        </p>
+      <header className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark">
+            Mis cursos
+          </h1>
+          <p className="text-sm font-medium text-gray-500 mt-1">
+            Continuá donde lo dejaste
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/certificates')}
+          className="bg-white text-titi-dark font-semibold text-sm px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all whitespace-nowrap"
+        >
+          🎓 Mis certificados
+        </button>
       </header>
 
       {loading ? (

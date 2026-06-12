@@ -164,7 +164,14 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Curso no encontrado' });
     }
 
-    res.json({ success: true, data: { curso } });
+    // Evaluación final: Evaluacion.cursoId no tiene relación en el schema,
+    // así que se resuelve con una query aparte.
+    const evaluacionFinal = await prisma.evaluacion.findFirst({
+      where: { cursoId: curso.id, esFinal: true },
+      select: { id: true, titulo: true, esFinal: true, notaMinima: true, intentosMax: true },
+    });
+
+    res.json({ success: true, data: { curso: { ...curso, evaluacionFinal } } });
   } catch (err) {
     console.error('GET /courses/:id error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo curso' });

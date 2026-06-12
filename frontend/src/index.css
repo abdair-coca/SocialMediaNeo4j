@@ -105,6 +105,23 @@
 .titi-streak-toast-in  { animation: titi-streak-toast-in  0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .titi-streak-toast-out { animation: titi-streak-toast-out 0.3s ease-in both; }
 
+/* ---- Toast de logros (entra desde la derecha) ---- */
+@keyframes titi-achievement-toast-in {
+  0%   { transform: translateX(120%) scale(0.95); opacity: 0; }
+  60%  { transform: translateX(-6px) scale(1.02); opacity: 1; }
+  100% { transform: translateX(0) scale(1);       opacity: 1; }
+}
+@keyframes titi-achievement-toast-out {
+  0%   { transform: translateX(0) scale(1);     opacity: 1; }
+  100% { transform: translateX(120%) scale(0.95); opacity: 0; }
+}
+.titi-achievement-toast-in  { animation: titi-achievement-toast-in  0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.titi-achievement-toast-out { animation: titi-achievement-toast-out 0.3s ease-in both; }
+@media (prefers-reduced-motion: reduce) {
+  .titi-achievement-toast-in,
+  .titi-achievement-toast-out { animation: none; }
+}
+
 /* Scrollbar amarillo Titi */
 ::-webkit-scrollbar {
   width: 10px;

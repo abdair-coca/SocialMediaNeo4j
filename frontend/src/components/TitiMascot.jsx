@@ -8,6 +8,9 @@ const moods = {
   surprised: { emoji: '😮', default: '¡Wow!' },
   motivating: { emoji: '💪', default: '¡Tú puedes!' },
   idle: { emoji: '😊', default: 'Todo tranquilo por aquí' },
+  celebrating: { emoji: '🏆', default: '¡Lo lograste!' },
+  fire: { emoji: '🔥', default: '¡Estás en racha!' },
+  proud: { emoji: '⭐', default: '¡Sabía que podías!' },
 };
 
 const sizes = {

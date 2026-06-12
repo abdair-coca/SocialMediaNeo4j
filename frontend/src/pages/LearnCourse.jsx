@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import LessonComments from '../components/LessonComments.jsx';
 import StreakToast from '../components/StreakToast.jsx';
+import AchievementToast from '../components/AchievementToast.jsx';
+import EvaluationQuiz from '../components/EvaluationQuiz.jsx';
 import { resolveMediaUrl } from '../lib/format.js';
 
 export default function LearnCourse() {
@@ -13,6 +15,13 @@ export default function LearnCourse() {
 
   // Toast de racha
   const [streakToast, setStreakToast] = useState({ shown: false, racha: 0 });
+
+  // Toast de logros desbloqueados + banner de curso completado
+  const [achievements, setAchievements] = useState([]);
+  const [certBanner, setCertBanner] = useState(null); // { codigoVerif }
+
+  // Evaluación activa (mutuamente excluyente con la lección activa)
+  const [activeEvalId, setActiveEvalId] = useState(null);
 
   const [curso, setCurso] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -187,8 +196,30 @@ export default function LearnCourse() {
   // --- Handlers ---
   const handleSelectLesson = (lessonId) => {
     setActiveId(lessonId);
+    setActiveEvalId(null);
     setCompleteError(null);
     setDrawerOpen(false);
+  };
+
+  const handleSelectEval = (evalId) => {
+    setActiveEvalId(evalId);
+    setCompleteError(null);
+    setDrawerOpen(false);
+  };
+
+  // Procesa racha / logros / curso completado que devuelven complete y attempt
+  const handleProgressEvents = (d) => {
+    const r = d?.racha;
+    if (r) {
+      updateUser({ racha: r.racha });
+      if (r.subio) setStreakToast({ shown: true, racha: r.racha });
+    }
+    if (d?.logros?.length) {
+      setAchievements(d.logros);
+    }
+    if (d?.cursoCompletado?.nuevo) {
+      setCertBanner({ codigoVerif: d.cursoCompletado.certificado?.codigoVerif });
+    }
   };
 
   const handleComplete = async () => {
@@ -203,15 +234,7 @@ export default function LearnCourse() {
           next.add(activeId);
           return next;
         });
-        // Propagar la racha actualizada al AuthContext y disparar toast si subió
-        const r = data.data?.racha;
-        if (r) {
-          console.log('Racha actualizada:', r);
-          updateUser({ racha: r.racha });
-          if (r.subio) {
-            setStreakToast({ shown: true, racha: r.racha });
-          }
-        }
+        handleProgressEvents(data.data);
       } else {
         setCompleteError(
           data?.message || 'No se pudo marcar la lección como completada',
@@ -269,6 +292,10 @@ export default function LearnCourse() {
         shown={streakToast.shown}
         racha={streakToast.racha}
         onDone={() => setStreakToast({ shown: false, racha: 0 })}
+      />
+      <AchievementToast
+        logros={achievements}
+        onDone={() => setAchievements([])}
       />
       {/* === Sidebar de lecciones (desktop) + drawer (móvil) === */}
       <aside
@@ -347,9 +374,43 @@ export default function LearnCourse() {
                       </li>
                     );
                   })}
+                  {modulo.evaluacion && (
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectEval(modulo.evaluacion.id)}
+                        className={[
+                          'w-full text-left px-4 py-2.5 flex items-center gap-3 cursor-pointer text-sm font-semibold hover:bg-titi-cream transition-colors',
+                          modulo.evaluacion.id === activeEvalId
+                            ? 'bg-purple-50 text-titi-dark border-l-2 border-titi-achievement'
+                            : 'text-titi-achievement',
+                        ].join(' ')}
+                      >
+                        <span className="text-base shrink-0" aria-hidden="true">📝</span>
+                        <span className="line-clamp-2 flex-1">{modulo.evaluacion.titulo}</span>
+                      </button>
+                    </li>
+                  )}
                 </ul>
               </div>
             ))
+          )}
+          {curso.evaluacionFinal && (
+            <div className="mt-2 border-t border-gray-100 pt-2">
+              <button
+                type="button"
+                onClick={() => handleSelectEval(curso.evaluacionFinal.id)}
+                className={[
+                  'w-full text-left px-4 py-3 flex items-center gap-3 cursor-pointer text-sm font-bold hover:bg-titi-cream transition-colors',
+                  curso.evaluacionFinal.id === activeEvalId
+                    ? 'bg-purple-50 text-titi-dark border-l-2 border-titi-achievement'
+                    : 'text-titi-achievement',
+                ].join(' ')}
+              >
+                <span className="text-base shrink-0" aria-hidden="true">🏁</span>
+                <span className="line-clamp-2 flex-1">{curso.evaluacionFinal.titulo}</span>
+              </button>
+            </div>
           )}
         </nav>
       </aside>
@@ -397,7 +458,19 @@ export default function LearnCourse() {
             </span>
           </div>
 
-          {activeLesson ? (
+          {certBanner && (
+            <CertificateBanner
+              onClose={() => setCertBanner(null)}
+            />
+          )}
+
+          {activeEvalId ? (
+            <EvaluationQuiz
+              key={activeEvalId}
+              evaluationId={activeEvalId}
+              onResult={handleProgressEvents}
+            />
+          ) : activeLesson ? (
             <LessonView
               leccion={activeLesson}
               materiales={materialsByLesson[activeLesson.id]}
@@ -542,6 +615,42 @@ function LessonView({ leccion, materiales, completed, completing, completeError,
       <hr className="border-titi-border my-8" />
       <LessonComments lessonId={leccion.id} />
     </article>
+  );
+}
+
+// ---- Banner de curso completado con certificado ----
+function CertificateBanner({ onClose }) {
+  return (
+    <div className="relative flex items-center gap-4 p-5 mb-6 bg-titi-yellow-light border-2 border-titi-yellow rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+      <img
+        src="/Titi.png"
+        alt="Titi"
+        className="w-16 h-16 object-contain drop-shadow-sm select-none shrink-0"
+        draggable={false}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-lg font-extrabold text-titi-dark leading-tight">
+          ¡Curso completado! 🎓
+        </p>
+        <p className="text-sm font-semibold text-gray-600 mt-0.5">
+          Tu certificado está listo y tiene código de verificación único.
+        </p>
+        <Link
+          to="/certificates"
+          className="inline-block mt-2 bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
+        >
+          Ver mi certificado
+        </Link>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Cerrar"
+        className="absolute top-2 right-3 text-gray-400 hover:text-gray-600 text-lg font-bold"
+      >
+        ✕
+      </button>
+    </div>
   );
 }
 

@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { randomUUID } from 'crypto';
 import { runQuery, toNumber } from '../db.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
+import prisma from '../prisma.js';
+import { checkLogroSocial } from '../services/achievement.service.js';
 
 const router = Router();
 
@@ -148,7 +150,25 @@ router.post('/:username/follow', requireAuth, async (req, res) => {
       { targetId, actorId: req.user.id, notifId }
     );
 
-    res.json({ success: true, data: { following: records[0].get('username') } });
+    // Logro "Social" (seguir a 10 personas) — nunca debe romper el follow.
+    let logros = [];
+    try {
+      const countRecords = await runQuery(
+        'MATCH (a:Usuario {id: $id})-[:SIGUIO]->(b:Usuario) RETURN count(b) as c',
+        { id: req.user.id },
+      );
+      const followingCount = toNumber(countRecords[0].get('c'));
+      if (followingCount >= 10) {
+        const pgUser = await prisma.usuario.findUnique({ where: { neoId: req.user.id } });
+        if (pgUser) {
+          logros = await checkLogroSocial(pgUser.id, followingCount);
+        }
+      }
+    } catch (logroErr) {
+      console.error('follow: error chequeando logro social', logroErr);
+    }
+
+    res.json({ success: true, data: { following: records[0].get('username'), logros } });
   } catch (err) {
     console.error('POST /follow error', err);
     res.status(500).json({ success: false, message: 'Error al seguir usuario' });

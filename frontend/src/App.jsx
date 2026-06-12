@@ -22,6 +22,8 @@ import LearnCourse from './pages/LearnCourse.jsx'
 import MyTeaching from './pages/teacher/MyTeaching.jsx'
 import CourseEditor from './pages/teacher/CourseEditor.jsx'
 import ModulesEditor from './pages/teacher/ModulesEditor.jsx'
+import EvaluationEditor from './pages/teacher/EvaluationEditor.jsx'
+import Certificates, { VerifyCertificate } from './pages/Certificates.jsx'
 
 // ---- Layouts ----
 
@@ -52,6 +54,17 @@ function ProtectedLayout() {
 function PublicOnlyLayout() {
   const { isAuthenticated } = useAuth();
   if (isAuthenticated) return <Navigate to="/feed" replace />;
+  return <Outlet />;
+}
+
+// Sub-rutas de creación/edición de cursos exigen rol PROFESOR/ADMIN.
+// /teacher (MyTeaching) queda fuera del guard porque ya muestra el flujo
+// "become-teacher" para usuarios que aún no son profesores.
+function TeacherOnly() {
+  const { user } = useAuth();
+  if (user?.rol !== 'PROFESOR' && user?.rol !== 'ADMIN') {
+    return <Navigate to="/courses" replace />;
+  }
   return <Outlet />;
 }
 
@@ -95,6 +108,9 @@ export default function App() {
       {/* Landing pública */}
       <Route path="/" element={<Home />} />
 
+      {/* Verificación pública de certificados (sin login) */}
+      <Route path="/verify/:codigo" element={<VerifyCertificate />} />
+
       {/* Rutas solo para no autenticados */}
       <Route element={<PublicOnlyLayout />}>
         <Route path="/login" element={<Login />} />
@@ -113,10 +129,15 @@ export default function App() {
         <Route path="/courses/:id" element={<CourseDetail />} />
         <Route path="/my-courses" element={<MyCourses />} />
         <Route path="/courses/:id/learn" element={<LearnCourse />} />
+        <Route path="/certificates" element={<Certificates />} />
         <Route path="/teacher" element={<MyTeaching />} />
-        <Route path="/teacher/courses/new" element={<CourseEditor />} />
-        <Route path="/teacher/courses/:id/edit" element={<CourseEditor />} />
-        <Route path="/teacher/courses/:id/modules" element={<ModulesEditor />} />
+        <Route element={<TeacherOnly />}>
+          <Route path="/teacher/courses/new" element={<CourseEditor />} />
+          <Route path="/teacher/courses/:id/edit" element={<CourseEditor />} />
+          <Route path="/teacher/courses/:id/modules" element={<ModulesEditor />} />
+          <Route path="/teacher/modules/:moduleId/evaluation" element={<EvaluationEditor mode="module" />} />
+          <Route path="/teacher/courses/:id/final-evaluation" element={<EvaluationEditor mode="final" />} />
+        </Route>
       </Route>
 
       {/* 404 */}
