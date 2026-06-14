@@ -111,7 +111,7 @@ function useCountUp(target, duration = 450) {
 
 // ---- Llama animada SVG ----
 
-function FlameIcon({ size = 24, dim = false, animated = true }) {
+export function FlameIcon({ size = 24, dim = false, animated = true }) {
   const id = `${size}-${dim ? 'dim' : 'lit'}`;
   return (
     <svg

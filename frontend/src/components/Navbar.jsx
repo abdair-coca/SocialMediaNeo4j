@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import client from '../api/client.js';
-import StreakBadge from './StreakBadge.jsx';
+import StreakBadge, { FlameIcon } from './StreakBadge.jsx';
 import useStreak from '../hooks/useStreak.js';
 
 // ---- Iconos inline ----
@@ -179,13 +179,31 @@ function Sidebar({ user, onLogout, unread, streak }) {
 
       {user && (
         <div className="px-3 pb-3 shrink-0">
-          {/* Racha siempre visible (mini): no cambia de layout al colapsar/expandir */}
-          <span className="inline-flex items-center gap-1 bg-titi-dark-mid border border-titi-streak/30 px-2.5 py-1 rounded-full">
-            <MiniFlame active={streak.estaActiva && streak.racha > 0} />
-            <span className="text-sm font-black text-titi-streak tabular-nums leading-none">
-              {streak.racha}
-            </span>
-          </span>
+          {/* Crossfade racha: colapsado = llama + número; expandido = badge completo.
+              La llama y el número coinciden en tamaño y posición entre ambos estados,
+              así que el badge (fondo + "días" + estado) se materializa alrededor sin salto. */}
+          <div className="relative">
+            {/* Colapsado: solo llama + número (entra en el rail de 80px) */}
+            <div className="flex items-center gap-2 px-2.5 py-2.5 opacity-100 group-hover:opacity-0 transition-opacity duration-200 ease-out pointer-events-none">
+              <FlameIcon
+                size={24}
+                animated={streak.estaActiva && streak.racha > 0}
+                dim={streak.racha === 0 || !streak.estaActiva}
+              />
+              <span className={`font-black text-xl leading-none tabular-nums ${streak.racha ? 'text-white' : 'text-gray-400'}`}>
+                {streak.racha}
+              </span>
+            </div>
+            {/* Expandido: badge completo, se materializa con un leve crecimiento */}
+            <div className="absolute left-0 top-0 origin-left opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300 ease-out">
+              <StreakBadge
+                variant="sidebar"
+                racha={streak.racha}
+                estaActiva={streak.estaActiva}
+                ultimaActividad={streak.ultimaActividad}
+              />
+            </div>
+          </div>
         </div>
       )}
       <div className="border-t border-white/10 p-3 space-y-2 shrink-0">
