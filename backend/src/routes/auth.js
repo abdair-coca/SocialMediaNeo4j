@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import { runQuery } from '../db.js';
 import prisma from '../prisma.js';
-import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -125,44 +124,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ---- POST /become-teacher — endpoint temporal (TODO eliminar en Etapa 4 cuando exista admin) ----
-// Permite auto-promoverse a PROFESOR verificado mientras no haya panel admin.
-router.post('/become-teacher', requireAuth, async (req, res) => {
-  try {
-    const usuario = await prisma.usuario.findUnique({ where: { neoId: req.user.id } });
-    if (!usuario) {
-      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
-    }
-
-    const updated = await prisma.usuario.update({
-      where: { id: usuario.id },
-      data: { rol: 'PROFESOR', verificado: true },
-    });
-
-    // Reemitir token con el nuevo rol para que el frontend lo refleje sin re-login
-    const token = jwt.sign(
-      { id: req.user.id, username: req.user.username, email: req.user.email, rol: updated.rol },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.json({
-      success: true,
-      data: {
-        user: {
-          id: req.user.id,
-          username: updated.username,
-          email: updated.email,
-          rol: updated.rol,
-          racha: updated.racha,
-        },
-        token,
-      },
-    });
-  } catch (err) {
-    console.error('POST /auth/become-teacher error', err);
-    res.status(500).json({ success: false, message: 'Error promoviéndote a profesor' });
-  }
-});
+// El endpoint temporal POST /become-teacher (autoascenso a PROFESOR en dev) se
+// eliminó en la Etapa 4: ahora un ADMIN asigna el rol vía PUT /api/admin/users/:id/role.
 
 export default router;
