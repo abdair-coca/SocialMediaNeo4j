@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
+import { syncInscripcion } from '../services/neo4j-sync.service.js';
 
 const router = Router();
 
@@ -434,6 +435,8 @@ router.post('/:id/enroll', requireAuth, requireRole('ESTUDIANTE'), async (req, r
       const inscripcion = await prisma.inscripcion.create({
         data: { usuarioId: req.dbUser.id, cursoId: curso.id },
       });
+      // Propagar a Neo4j para recomendaciones / feed académico (no bloquea la respuesta)
+      await syncInscripcion(req.user.id, curso.id);
       res.status(201).json({ success: true, data: { inscripcion } });
     } catch (err) {
       if (err.code === 'P2002') {

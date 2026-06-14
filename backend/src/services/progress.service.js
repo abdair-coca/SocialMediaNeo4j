@@ -1,5 +1,6 @@
 import prisma from '../prisma.js';
 import { otorgarLogro } from './achievement.service.js';
+import { syncCursoCompletado } from './neo4j-sync.service.js';
 
 function startOfDay(date) {
   const d = new Date(date);
@@ -136,6 +137,10 @@ export async function checkCursoCompletado(usuarioId, cursoId) {
     }
 
     const logro = await otorgarLogro(usuarioId, 'Primer curso');
+
+    // Propagar a Neo4j para recomendaciones / feed académico (no bloquea)
+    await syncCursoCompletado(usuarioId, cursoId);
+
     return { completado: true, nuevo: true, certificado, logros: logro ? [logro] : [] };
   } catch (err) {
     console.error('checkCursoCompletado error', err);

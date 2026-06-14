@@ -1,4 +1,5 @@
 import prisma from '../prisma.js';
+import { syncLogroNotificacion } from './neo4j-sync.service.js';
 
 /**
  * Catálogo base de logros (AGENTSGoal §8.2).
@@ -76,6 +77,10 @@ export async function otorgarLogro(usuarioId, nombre) {
     const logro = await prisma.logro.findUnique({ where: { nombre } });
     if (!logro) return null;
     await prisma.logroUsuario.create({ data: { usuarioId, logroId: logro.id } });
+
+    // Logro recién desbloqueado → notificar a los seguidores vía Neo4j (no bloquea)
+    await syncLogroNotificacion(usuarioId, logro.nombre);
+
     return logro;
   } catch (err) {
     // P2002 → ya lo tenía (el @@id([usuarioId, logroId]) previene duplicados)

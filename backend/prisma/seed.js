@@ -99,6 +99,52 @@ async function seedProfesorDemo() {
   return pgUser;
 }
 
+async function seedAdminDemo() {
+  console.log('→ Sembrando admin_demo...');
+  const username = 'admin_demo';
+  const email = 'admin_demo@titi.local';
+  const password = process.env.SEED_PASSWORD || 'titi1234';
+
+  // Existe en Postgres?
+  let pgUser = await prisma.usuario.findUnique({ where: { email } });
+
+  // Espejo en Neo4j
+  const existing = await runQuery(
+    'MATCH (u:Usuario {email: $email}) RETURN u LIMIT 1',
+    { email }
+  );
+
+  let neoId;
+  if (existing.length === 0) {
+    neoId = randomUUID();
+    const hash = await bcrypt.hash(password, 10);
+    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`;
+    await runQuery(
+      `CREATE (u:Usuario {
+         id: $id, username: $username, email: $email, password: $password,
+         bio: 'Admin demo de Titi — cuenta de prueba',
+         avatarUrl: $avatarUrl, createdAt: datetime()
+       }) RETURN u`,
+      { id: neoId, username, email, password: hash, avatarUrl }
+    );
+  } else {
+    neoId = existing[0].get('u').properties.id;
+  }
+
+  if (!pgUser) {
+    pgUser = await prisma.usuario.create({
+      data: { neoId, username, email, rol: 'ADMIN', verificado: true },
+    });
+  } else {
+    pgUser = await prisma.usuario.update({
+      where: { id: pgUser.id },
+      data: { rol: 'ADMIN', verificado: true, neoId },
+    });
+  }
+  console.log(`  ✓ admin_demo listo (Postgres id=${pgUser.id})`);
+  return pgUser;
+}
+
 async function seedCursoDemo(profesor, categorias) {
   console.log('→ Sembrando curso demo...');
   const programacion = categorias.find((c) => c.nombre === 'Programación');
@@ -292,12 +338,16 @@ async function main() {
   try {
     const categorias = await seedCategorias();
     const profesor = await seedProfesorDemo();
+    await seedAdminDemo();
     const curso = await seedCursoDemo(profesor, categorias);
     await seedLogros();
     await seedEvaluacionDemo(curso);
     console.log('\n✓ Seed completado correctamente.');
     console.log('  Login del profesor demo:');
     console.log('    email:    profesor.demo@titi.local');
+    console.log(`    password: ${process.env.SEED_PASSWORD || 'titi1234'}`);
+    console.log('  Login del admin demo:');
+    console.log('    email:    admin_demo@titi.local');
     console.log(`    password: ${process.env.SEED_PASSWORD || 'titi1234'}`);
   } catch (err) {
     console.error('Error en seed:', err);
