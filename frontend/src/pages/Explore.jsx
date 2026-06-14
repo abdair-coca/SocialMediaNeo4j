@@ -15,7 +15,7 @@ export default function Explore() {
   }, [query]);
 
   return (
-    <div>
+    <div className="max-w-xl mx-auto">
       <header className="mb-6">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-titi-text mb-1">Explorar</h1>
         <p className="text-sm text-titi-muted font-semibold">

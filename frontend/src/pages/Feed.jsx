@@ -58,7 +58,7 @@ export default function Feed() {
   const isEmpty = timeline.length === 0;
 
   return (
-    <div>
+    <div className="max-w-xl mx-auto">
       <header className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-titi-text">Inicio</h1>
