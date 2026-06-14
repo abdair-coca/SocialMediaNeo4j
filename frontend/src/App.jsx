@@ -24,6 +24,10 @@ import CourseEditor from './pages/teacher/CourseEditor.jsx'
 import ModulesEditor from './pages/teacher/ModulesEditor.jsx'
 import EvaluationEditor from './pages/teacher/EvaluationEditor.jsx'
 import Certificates, { VerifyCertificate } from './pages/Certificates.jsx'
+import AdminDashboard from './pages/admin/AdminDashboard.jsx'
+import AdminUsers from './pages/admin/AdminUsers.jsx'
+import AdminCourses from './pages/admin/AdminCourses.jsx'
+import AdminCategories from './pages/admin/AdminCategories.jsx'
 
 // ---- Layouts ----
 
@@ -64,6 +68,15 @@ function TeacherOnly() {
   const { user } = useAuth();
   if (user?.rol !== 'PROFESOR' && user?.rol !== 'ADMIN') {
     return <Navigate to="/courses" replace />;
+  }
+  return <Outlet />;
+}
+
+// Sub-rutas del panel admin. Solo rol ADMIN; el resto vuelve al feed.
+function AdminOnly() {
+  const { user } = useAuth();
+  if (user?.rol !== 'ADMIN') {
+    return <Navigate to="/feed" replace />;
   }
   return <Outlet />;
 }
@@ -137,6 +150,12 @@ export default function App() {
           <Route path="/teacher/courses/:id/modules" element={<ModulesEditor />} />
           <Route path="/teacher/modules/:moduleId/evaluation" element={<EvaluationEditor mode="module" />} />
           <Route path="/teacher/courses/:id/final-evaluation" element={<EvaluationEditor mode="final" />} />
+        </Route>
+        <Route element={<AdminOnly />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/courses" element={<AdminCourses />} />
+          <Route path="/admin/categories" element={<AdminCategories />} />
         </Route>
       </Route>
 

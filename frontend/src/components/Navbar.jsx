@@ -56,6 +56,11 @@ const Icon = {
       <path d="M6 12v5c3 2 9 2 12 0v-5" />
     </svg>
   ),
+  Shield: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+    </svg>
+  ),
 };
 
 function useUnreadNotifications() {
@@ -141,6 +146,12 @@ function Sidebar({ user, onLogout, unread, streak }) {
             <span>Enseñar</span>
           </NavLink>
         )}
+        {user?.rol === 'ADMIN' && (
+          <NavLink to="/admin" className={sidebarItemClass}>
+            <Icon.Shield className="w-5 h-5" />
+            <span>Admin</span>
+          </NavLink>
+        )}
         <NavLink to="/notifications" className={sidebarItemClass}>
           <span className="relative inline-flex">
             <Icon.Bell className="w-5 h-5" />
@@ -203,7 +214,7 @@ function Sidebar({ user, onLogout, unread, streak }) {
 }
 
 // ---- Top bar móvil ----
-function MobileTopBar({ onLogout, unread, streak, showStreak }) {
+function MobileTopBar({ user, onLogout, unread, streak, showStreak }) {
   return (
     <header className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-titi-dark text-white border-b border-titi-dark shadow-titi">
       <div className="h-full px-4 flex items-center justify-between gap-2">
@@ -211,6 +222,15 @@ function MobileTopBar({ onLogout, unread, streak, showStreak }) {
           <TitiLogo size="md" />
         </Link>
         <div className="flex items-center gap-2">
+          {user?.rol === 'ADMIN' && (
+            <Link
+              to="/admin"
+              aria-label="Panel de administración"
+              className="p-2 rounded-full text-white/85 hover:text-titi-yellow hover:bg-white/10 transition-colors"
+            >
+              <Icon.Shield className="w-5 h-5" />
+            </Link>
+          )}
           {showStreak && (
             <Link
               to="/my-courses"
@@ -331,6 +351,7 @@ export default function Navbar() {
     <>
       <Sidebar user={user} onLogout={handleLogout} unread={unread} streak={streak} />
       <MobileTopBar
+        user={user}
         onLogout={handleLogout}
         unread={unread}
         streak={streak}

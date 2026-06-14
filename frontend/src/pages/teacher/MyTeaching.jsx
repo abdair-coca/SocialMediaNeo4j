@@ -76,11 +76,10 @@ export default function MyTeaching() {
     return (
       <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-xl">
         <h2 className="text-xl font-bold text-titi-dark mb-2">Conviértete en profesor</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Para crear cursos necesitas tener el rol PROFESOR. Mientras no exista el panel admin,
-          podés activarlo desde esta cuenta.
+        <p className="text-sm text-gray-500">
+          Para crear cursos necesitas el rol PROFESOR. Pedile a un administrador de Titi que te
+          active el rol desde el panel de administración.
         </p>
-        <BecomeTeacherButton />
       </div>
     );
   }
@@ -222,41 +221,6 @@ function TeachingCard({ curso, busy, onEdit, onContent, onTogglePublish, onDelet
         </div>
       </div>
     </article>
-  );
-}
-
-function BecomeTeacherButton() {
-  const [busy, setBusy] = useState(false);
-
-  async function go() {
-    setBusy(true);
-    try {
-      const { data } = await client.post('/api/auth/become-teacher');
-      if (data?.success) {
-        // Reemplazar token y user en localStorage
-        localStorage.setItem('token', data.data.token);
-        localStorage.setItem('user', JSON.stringify(data.data.user));
-        // Forzar recarga para que AuthContext lea los nuevos valores
-        window.location.reload();
-      } else {
-        alert(data?.message || 'No se pudo activar el rol de profesor');
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || err.message || 'Error');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={go}
-      disabled={busy}
-      className="bg-titi-yellow text-titi-dark font-bold text-sm px-5 py-2.5 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50"
-    >
-      {busy ? 'Activando…' : 'Convertirme en profesor (dev)'}
-    </button>
   );
 }
 
