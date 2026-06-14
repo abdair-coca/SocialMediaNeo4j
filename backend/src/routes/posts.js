@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import { runQuery, toNumber } from '../db.js';
+import prisma from '../prisma.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 
 const router = Router();
@@ -96,6 +97,64 @@ router.get('/feed', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('GET /feed error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo feed' });
+  }
+});
+
+// ---- Feed académico — actividad de cursos/logros de gente que sigo ----
+router.get('/feed/academic', requireAuth, async (req, res) => {
+  try {
+    // Para 'logro' se matchea vía RECIBIO (mi notificación), no vía SOBRE+SIGUIO:
+    // las notificaciones se crean una por seguidor, así que SOBRE duplicaría.
+    const records = await runQuery(
+      `MATCH (me:Usuario {id: $userId})-[:SIGUIO]->(amigo:Usuario)-[r:INSCRITO_EN]->(ref:CursoRef)
+       RETURN amigo.username AS actorUsername, amigo.avatarUrl AS actorAvatarUrl,
+              'inscripcion' AS type, ref.cursoId AS cursoId, null AS logroNombre,
+              r.fechaInscripcion AS createdAt
+       UNION
+       MATCH (me:Usuario {id: $userId})-[:SIGUIO]->(amigo:Usuario)-[r:COMPLETO_CURSO]->(ref:CursoRef)
+       RETURN amigo.username AS actorUsername, amigo.avatarUrl AS actorAvatarUrl,
+              'curso_completado' AS type, ref.cursoId AS cursoId, null AS logroNombre,
+              r.fechaCompletado AS createdAt
+       UNION
+       MATCH (me:Usuario {id: $userId})<-[:RECIBIO]-(n:Notificacion {type: 'logro'})-[:SOBRE]->(amigo:Usuario)
+       RETURN amigo.username AS actorUsername, amigo.avatarUrl AS actorAvatarUrl,
+              'logro' AS type, null AS cursoId, n.logroNombre AS logroNombre,
+              n.createdAt AS createdAt`,
+      { userId: req.user.id }
+    );
+
+    let activity = records.map((r) => ({
+      actorUsername: r.get('actorUsername'),
+      actorAvatarUrl: r.get('actorAvatarUrl'),
+      type: r.get('type'),
+      cursoId: r.get('cursoId'),
+      logroNombre: r.get('logroNombre'),
+      createdAt: r.get('createdAt')?.toString?.() ?? r.get('createdAt'),
+    }));
+
+    // Hidratar los cursos referenciados desde Postgres
+    const cursoIds = [...new Set(activity.filter((a) => a.cursoId).map((a) => a.cursoId))];
+    if (cursoIds.length > 0) {
+      const cursos = await prisma.curso.findMany({
+        where: { id: { in: cursoIds } },
+        select: { id: true, titulo: true, categoria: { select: { nombre: true, icono: true } } },
+      });
+      const byId = new Map(cursos.map((c) => [c.id, c]));
+      activity = activity.map((a) =>
+        a.cursoId && byId.has(a.cursoId)
+          ? { ...a, curso: { id: a.cursoId, titulo: byId.get(a.cursoId).titulo, categoria: byId.get(a.cursoId).categoria } }
+          : a
+      );
+    }
+
+    // Ordenar por fecha DESC y limitar (sin paginación pesada — Etapa 5)
+    activity.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    activity = activity.slice(0, 50);
+
+    res.json({ success: true, data: { activity } });
+  } catch (err) {
+    console.error('GET /feed/academic error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo feed académico' });
   }
 });
 

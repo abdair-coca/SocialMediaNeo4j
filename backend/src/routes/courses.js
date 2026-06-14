@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import prisma from '../prisma.js';
+import { runQuery, toNumber } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { syncInscripcion } from '../services/neo4j-sync.service.js';
 
@@ -131,6 +132,56 @@ router.get('/my/teaching', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('GET /courses/my/teaching error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo cursos enseñados' });
+  }
+});
+
+// ---- GET /recommended  — cursos que toman mis amigos y yo no (auth) ----
+// Debe ir ANTES de /:id para no ser capturada como id="recommended".
+router.get('/recommended', requireAuth, async (req, res) => {
+  try {
+    const records = await runQuery(
+      `MATCH (yo:Usuario {id: $neoId})-[:SIGUIO]->(amigo:Usuario)-[:INSCRITO_EN]->(ref:CursoRef)
+       WHERE NOT EXISTS { (yo)-[:INSCRITO_EN]->(ref) }
+       RETURN ref.cursoId AS cursoId,
+              count(DISTINCT amigo) AS friendCount,
+              collect(DISTINCT amigo.username)[0..3] AS sampleFriends
+       ORDER BY friendCount DESC
+       LIMIT 12`,
+      { neoId: req.user.id }
+    );
+
+    const rows = records.map((r) => ({
+      cursoId: r.get('cursoId'),
+      friendCount: toNumber(r.get('friendCount')),
+      sampleFriends: r.get('sampleFriends') || [],
+    }));
+    if (rows.length === 0) {
+      return res.json({ success: true, data: { recommended: [] } });
+    }
+
+    // Hidratar contra Postgres — solo cursos publicados que aún existen
+    const cursos = await prisma.curso.findMany({
+      where: { id: { in: rows.map((r) => r.cursoId) }, publicado: true },
+      include: {
+        categoria: true,
+        creador: { select: { id: true, username: true } },
+        _count: { select: { inscripciones: true, modulos: true } },
+      },
+    });
+    const byId = new Map(cursos.map((c) => [c.id, c]));
+
+    const recommended = rows
+      .filter((r) => byId.has(r.cursoId))
+      .map((r) => ({
+        curso: byId.get(r.cursoId),
+        friendCount: r.friendCount,
+        sampleFriends: r.sampleFriends,
+      }));
+
+    res.json({ success: true, data: { recommended } });
+  } catch (err) {
+    console.error('GET /courses/recommended error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo recomendaciones' });
   }
 });
 
