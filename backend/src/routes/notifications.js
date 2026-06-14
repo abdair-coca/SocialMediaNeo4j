@@ -30,6 +30,7 @@ router.get('/', requireAuth, async (req, res) => {
         type: n.type,
         read: Boolean(n.read),
         createdAt: n.createdAt?.toString?.() ?? n.createdAt,
+        logroNombre: n.logroNombre ?? null,
         actor: r.get('actorUsername')
           ? { username: r.get('actorUsername'), avatarUrl: r.get('actorAvatar') }
           : null,

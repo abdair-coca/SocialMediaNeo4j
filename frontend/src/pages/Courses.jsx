@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client.js';
+import { useAuth } from '../context/AuthContext.jsx';
+import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
 
 const NIVELES = [
   { value: 'all', label: 'Todos los niveles' },
@@ -11,6 +13,7 @@ const NIVELES = [
 
 export default function Courses() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -19,9 +22,32 @@ export default function Courses() {
 
   const [categorias, setCategorias] = useState([]);
   const [cursos, setCursos] = useState([]);
+  const [recommended, setRecommended] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
+
+  // Recomendados por amigos — solo para usuarios autenticados.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setRecommended([]);
+      return;
+    }
+    let cancelled = false;
+    client
+      .get('/api/courses/recommended')
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.success) setRecommended(data.data?.recommended || []);
+      })
+      .catch(() => {
+        // Silencioso: la sección de recomendados no bloquea el catálogo.
+        if (!cancelled) setRecommended([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
 
   // Cargar categorías una sola vez
   useEffect(() => {
@@ -97,6 +123,26 @@ export default function Courses() {
           Aprendé algo nuevo con la comunidad Titi
         </p>
       </header>
+
+      {/* Recomendados por tus amigos */}
+      {recommended.length > 0 && (
+        <section aria-label="Recomendados por tus amigos" className="mb-8">
+          <h2 className="text-lg font-bold text-titi-dark mb-3">
+            Tus amigos están aprendiendo
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recommended.map(({ curso, friendCount, sampleFriends }) => (
+              <RecommendedCourseCard
+                key={curso.id}
+                curso={curso}
+                friendCount={friendCount}
+                sampleFriends={sampleFriends}
+                onOpen={() => navigate(`/courses/${curso.id}`)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6 sm:mb-8">

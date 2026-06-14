@@ -89,6 +89,7 @@ function NotificationItem({ notif, onClick }) {
     notif.type === 'like' ? 'le dio ❤️ a tu post'
     : notif.type === 'comment' ? 'comentó tu post'
     : notif.type === 'follow' ? 'empezó a seguirte'
+    : notif.type === 'logro' ? `desbloqueó el logro ${notif.logroNombre ?? ''} 🏅`
     : 'interactuó contigo';
 
   const linkTo = notif.user

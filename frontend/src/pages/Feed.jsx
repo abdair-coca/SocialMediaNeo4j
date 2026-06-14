@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import client from '../api/client.js';
 import PostCard from '../components/PostCard.jsx';
 import CreatePost from '../components/CreatePost.jsx';
+import AcademicActivityCard from '../components/AcademicActivityCard.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
 
 export default function Feed() {
   const [posts, setPosts] = useState([]);
+  const [academic, setAcademic] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -14,9 +16,23 @@ export default function Feed() {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await client.get('/api/posts/feed');
-      if (data?.success) setPosts(data.data.posts || []);
-      else setError(data?.message || 'No se pudo cargar el feed');
+      const [postsRes, acadRes] = await Promise.allSettled([
+        client.get('/api/posts/feed'),
+        client.get('/api/posts/feed/academic'),
+      ]);
+
+      // El feed social es el principal: si falla, mostramos error.
+      if (postsRes.status === 'rejected') throw postsRes.reason;
+      const postsData = postsRes.value.data;
+      if (postsData?.success) setPosts(postsData.data.posts || []);
+      else setError(postsData?.message || 'No se pudo cargar el feed');
+
+      // El feed académico es complementario: si falla, no rompe el feed.
+      if (acadRes.status === 'fulfilled' && acadRes.value.data?.success) {
+        setAcademic(acadRes.value.data.data.activity || []);
+      } else {
+        setAcademic([]);
+      }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Error de red');
     } finally {
@@ -32,6 +48,14 @@ export default function Feed() {
   const handleEdit = useCallback((updated) => {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
   }, []);
+
+  // Mezclar posts + actividad académica en una sola línea de tiempo (DESC).
+  const timeline = [
+    ...posts.map((p) => ({ kind: 'post', createdAt: p.createdAt, data: p })),
+    ...academic.map((a, i) => ({ kind: 'academic', createdAt: a.createdAt, data: a, _i: i })),
+  ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const isEmpty = timeline.length === 0;
 
   return (
     <div>
@@ -52,7 +76,7 @@ export default function Feed() {
 
       <CreatePost onCreated={fetchFeed} />
 
-      {loading && posts.length === 0 && <FeedSkeleton />}
+      {loading && isEmpty && <FeedSkeleton />}
 
       {error && (
         <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
@@ -62,18 +86,25 @@ export default function Feed() {
         </div>
       )}
 
-      {!loading && !error && posts.length === 0 && <EmptyFeed />}
+      {!loading && !error && isEmpty && <EmptyFeed />}
 
-      {posts.length > 0 && (
+      {timeline.length > 0 && (
         <div>
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              onDelete={handleDelete}
-              onEdit={handleEdit}
-            />
-          ))}
+          {timeline.map((entry) =>
+            entry.kind === 'post' ? (
+              <PostCard
+                key={entry.data.id}
+                post={entry.data}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+              />
+            ) : (
+              <AcademicActivityCard
+                key={`acad-${entry.data.type}-${entry.data.actorUsername}-${entry.data.cursoId || entry.data.logroNombre}-${entry.data.createdAt}-${entry._i}`}
+                item={entry.data}
+              />
+            )
+          )}
         </div>
       )}
     </div>
