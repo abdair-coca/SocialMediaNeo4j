@@ -116,59 +116,69 @@ function sidebarItemClass({ isActive }) {
     : `${base} text-white/85 hover:bg-white/10 hover:text-white`;
 }
 
+// Las etiquetas del sidebar solo se ven cuando el rail está expandido (hover).
+const sidebarLabel = 'whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200';
+
 function Sidebar({ user, onLogout, unread, streak }) {
   return (
-    <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-titi-dark border-r border-titi-dark flex-col z-20 text-white">
-      <Link to="/feed" className="block px-6 py-6 border-b border-white/10">
-        <TitiLogo size="lg" />
+    <aside className="hidden md:flex group fixed left-0 top-0 h-screen w-20 hover:w-64 bg-titi-dark border-r border-white/10 flex-col z-20 text-white overflow-hidden transition-[width] duration-200 ease-out">
+      <Link to="/feed" className="flex items-center gap-2 h-16 px-5 border-b border-white/10 shrink-0">
+        <img
+          src="/favicon.png"
+          alt=""
+          className="w-9 h-9 object-contain select-none shrink-0"
+          draggable={false}
+          onError={(e) => (e.currentTarget.style.display = 'none')}
+        />
+        <span className={`text-2xl font-extrabold lowercase tracking-tight ${sidebarLabel}`}>Titi</span>
       </Link>
 
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
         <NavLink to="/feed" className={sidebarItemClass} end>
-          <Icon.Home className="w-5 h-5" />
-          <span>Inicio</span>
+          <Icon.Home className="w-5 h-5 shrink-0" />
+          <span className={sidebarLabel}>Inicio</span>
         </NavLink>
         <NavLink to="/explore" className={sidebarItemClass}>
-          <Icon.Compass className="w-5 h-5" />
-          <span>Explorar</span>
+          <Icon.Compass className="w-5 h-5 shrink-0" />
+          <span className={sidebarLabel}>Explorar</span>
         </NavLink>
         <NavLink to="/courses" className={sidebarItemClass}>
-          <Icon.Books className="w-5 h-5" />
-          <span>Cursos</span>
+          <Icon.Books className="w-5 h-5 shrink-0" />
+          <span className={sidebarLabel}>Cursos</span>
         </NavLink>
         <NavLink to="/my-courses" className={sidebarItemClass}>
-          <Icon.Target className="w-5 h-5" />
-          <span>Mis cursos</span>
+          <Icon.Target className="w-5 h-5 shrink-0" />
+          <span className={sidebarLabel}>Mis cursos</span>
         </NavLink>
         {(user?.rol === 'PROFESOR' || user?.rol === 'ADMIN') && (
           <NavLink to="/teacher" className={sidebarItemClass}>
-            <Icon.Cap className="w-5 h-5" />
-            <span>Enseñar</span>
+            <Icon.Cap className="w-5 h-5 shrink-0" />
+            <span className={sidebarLabel}>Enseñar</span>
           </NavLink>
         )}
         {user?.rol === 'ADMIN' && (
           <NavLink to="/admin" className={sidebarItemClass}>
-            <Icon.Shield className="w-5 h-5" />
-            <span>Admin</span>
+            <Icon.Shield className="w-5 h-5 shrink-0" />
+            <span className={sidebarLabel}>Admin</span>
           </NavLink>
         )}
         <NavLink to="/notifications" className={sidebarItemClass}>
-          <span className="relative inline-flex">
+          <span className="relative inline-flex shrink-0">
             <Icon.Bell className="w-5 h-5" />
             <NotifBadge count={unread} />
           </span>
-          <span>Notificaciones</span>
+          <span className={sidebarLabel}>Notificaciones</span>
         </NavLink>
         {user?.username && (
           <NavLink to={`/profile/${user.username}`} className={sidebarItemClass}>
-            <Icon.User className="w-5 h-5" />
-            <span>Mi perfil</span>
+            <Icon.User className="w-5 h-5 shrink-0" />
+            <span className={sidebarLabel}>Mi perfil</span>
           </NavLink>
         )}
       </nav>
 
       {user && (
-        <div className="px-3 pb-3">
+        <div className={`px-3 pb-3 ${sidebarLabel}`}>
           <StreakBadge
             variant="sidebar"
             racha={streak.racha}
@@ -177,7 +187,7 @@ function Sidebar({ user, onLogout, unread, streak }) {
           />
         </div>
       )}
-      <div className="border-t border-white/10 p-3 space-y-2">
+      <div className="border-t border-white/10 p-3 space-y-2 shrink-0">
         {user && (
           <Link
             to={`/profile/${user.username}`}
@@ -187,14 +197,14 @@ function Sidebar({ user, onLogout, unread, streak }) {
               <img
                 src={user.avatarUrl}
                 alt={user.username}
-                className="w-9 h-9 rounded-full bg-titi-dark border-2 border-titi-yellow"
+                className="w-9 h-9 rounded-full bg-titi-dark border-2 border-titi-yellow shrink-0"
               />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold">
+              <div className="w-9 h-9 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold shrink-0">
                 {user.username?.[0]?.toUpperCase() ?? '?'}
               </div>
             )}
-            <div className="min-w-0">
+            <div className={`min-w-0 ${sidebarLabel}`}>
               <p className="text-sm font-bold truncate">@{user.username}</p>
               <p className="text-xs text-white/60 truncate">Ver perfil</p>
             </div>
@@ -205,8 +215,8 @@ function Sidebar({ user, onLogout, unread, streak }) {
           onClick={onLogout}
           className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-white/85 hover:bg-titi-red/20 hover:text-titi-red transition-colors font-bold"
         >
-          <Icon.Logout className="w-5 h-5" />
-          <span>Cerrar sesión</span>
+          <Icon.Logout className="w-5 h-5 shrink-0" />
+          <span className={sidebarLabel}>Cerrar sesión</span>
         </button>
       </div>
     </aside>
