@@ -21,6 +21,7 @@ import materialRoutes from './routes/materials.js'
 import categoryRoutes from './routes/categories.js'
 import progressRoutes from './routes/progress.js'
 import evaluationRoutes from './routes/evaluations.js'
+import adminRoutes from './routes/admin.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -76,6 +77,7 @@ app.use('/api', materialRoutes)
 app.use('/api', evaluationRoutes)
 app.use('/api/categories', categoryRoutes)
 app.use('/api/progress', progressRoutes)
+app.use('/api/admin', adminRoutes)
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Ruta no encontrada' });
