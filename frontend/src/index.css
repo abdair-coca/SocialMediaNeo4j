@@ -139,6 +139,15 @@
   background: #FF9A3C;
 }
 
+/* Oculta scrollbar manteniendo scroll funcional */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Asegura body con paleta Titi aunque haya clases legacy en index.html */
 body {
   background-color: #FFFBF0 !important;

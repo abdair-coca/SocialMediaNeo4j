@@ -318,7 +318,7 @@ export default function Profile() {
       <div
         role="tablist"
         aria-label="Secciones del perfil"
-        className="flex gap-2 mb-5 border-b-2 border-titi-border px-1"
+        className="flex gap-1 mb-5 border-b-2 border-titi-border px-1 overflow-x-auto scrollbar-none"
       >
         <TabButton
           active={tab === 'posts'}
@@ -406,7 +406,7 @@ function TabButton({ active, onClick, icon, label, count }) {
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2.5 -mb-0.5 font-bold text-sm rounded-t-xl transition-all ${active
+      className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2.5 -mb-0.5 font-bold text-sm rounded-t-xl transition-all flex-shrink-0 ${active
         ? 'text-titi-dark bg-titi-yellow-light border-b-2 border-titi-yellow'
         : 'text-titi-muted hover:text-titi-dark hover:bg-titi-bg'
         }`}
