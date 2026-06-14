@@ -197,25 +197,30 @@ router.delete('/courses/:id', async (req, res) => {
       ? (await prisma.pregunta.findMany({ where: { evaluacionId: { in: evalIds } }, select: { id: true } })).map((p) => p.id)
       : [];
 
-    await prisma.$transaction(async (tx) => {
-      if (preguntaIds.length) await tx.opcion.deleteMany({ where: { preguntaId: { in: preguntaIds } } });
-      if (evalIds.length) {
-        await tx.pregunta.deleteMany({ where: { evaluacionId: { in: evalIds } } });
-        await tx.intento.deleteMany({ where: { evaluacionId: { in: evalIds } } });
-        await tx.evaluacion.deleteMany({ where: { id: { in: evalIds } } });
-      }
-      if (leccionIds.length) {
-        await tx.material.deleteMany({ where: { leccionId: { in: leccionIds } } });
-        await tx.progreso.deleteMany({ where: { leccionId: { in: leccionIds } } });
-        await tx.comentarioLeccion.deleteMany({ where: { leccionId: { in: leccionIds } } });
-        await tx.leccion.deleteMany({ where: { id: { in: leccionIds } } });
-      }
-      if (moduloIds.length) await tx.modulo.deleteMany({ where: { id: { in: moduloIds } } });
-      await tx.inscripcion.deleteMany({ where: { cursoId: curso.id } });
-      await tx.certificado.deleteMany({ where: { cursoId: curso.id } });
-      await tx.cursoProfesor.deleteMany({ where: { cursoId: curso.id } });
-      await tx.curso.delete({ where: { id: curso.id } });
-    });
+    // Timeout amplio: la cascada hace muchos deleteMany secuenciales y la DB
+    // puede ser remota (Aura/Postgres administrado), superando el default de 5s.
+    await prisma.$transaction(
+      async (tx) => {
+        if (preguntaIds.length) await tx.opcion.deleteMany({ where: { preguntaId: { in: preguntaIds } } });
+        if (evalIds.length) {
+          await tx.pregunta.deleteMany({ where: { evaluacionId: { in: evalIds } } });
+          await tx.intento.deleteMany({ where: { evaluacionId: { in: evalIds } } });
+          await tx.evaluacion.deleteMany({ where: { id: { in: evalIds } } });
+        }
+        if (leccionIds.length) {
+          await tx.material.deleteMany({ where: { leccionId: { in: leccionIds } } });
+          await tx.progreso.deleteMany({ where: { leccionId: { in: leccionIds } } });
+          await tx.comentarioLeccion.deleteMany({ where: { leccionId: { in: leccionIds } } });
+          await tx.leccion.deleteMany({ where: { id: { in: leccionIds } } });
+        }
+        if (moduloIds.length) await tx.modulo.deleteMany({ where: { id: { in: moduloIds } } });
+        await tx.inscripcion.deleteMany({ where: { cursoId: curso.id } });
+        await tx.certificado.deleteMany({ where: { cursoId: curso.id } });
+        await tx.cursoProfesor.deleteMany({ where: { cursoId: curso.id } });
+        await tx.curso.delete({ where: { id: curso.id } });
+      },
+      { timeout: 20000, maxWait: 10000 },
+    );
 
     res.json({ success: true, data: { deleted: curso.id } });
   } catch (err) {
