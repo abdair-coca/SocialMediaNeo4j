@@ -621,39 +621,29 @@ const MENSAJES_TITI = {
 
 ---
 
-### 🔄 Etapa 4 — Integración Social + Admin (EN CURSO)
+### ✅ Etapa 4 — Integración Social + Admin (COMPLETADA)
 
-**Dependencias:** Etapa 3 cerrada.
+**Alcance entregado:**
+- Propagación de eventos educativos a Neo4j vía `services/neo4j-sync.service.js`: nodos `:CursoRef`, relaciones `INSCRITO_EN` (en `enroll`) y `COMPLETO_CURSO` (en `checkCursoCompletado`), notificación `type: 'logro'` a seguidores. Todo en `try/catch` que loguea pero **nunca** bloquea la respuesta Postgres.
+- Feed académico `GET /api/posts/feed/academic`: mezcla `inscripcion` / `curso_completado` / `logro` de gente que sigo, ordenado por timestamp DESC, hidratado contra Postgres. Solo actividad de seguidos (privacidad).
+- Recomendaciones por amigos `GET /api/courses/recommended`: cursos publicados que mis amigos tomaron y yo no, con `friendCount` + `sampleFriends`.
+- `routes/admin.js` (10 endpoints con `requireRole('ADMIN')`): users (lista, verify, role), courses (lista incl. borradores, approve, delete forzado con cascada), stats, CRUD de categorías. Montado en `/api/admin`.
+- Frontend estudiante: `AcademicActivityCard` intercalada en `Feed`, sección "Tus amigos están aprendiendo" con `RecommendedCourseCard` en `Courses`, notificación `type: 'logro'` en `Notifications`.
+- Frontend admin: `pages/admin/*` (Dashboard, Users, Courses, Categories) + guard `AdminOnly`, entrada "Admin" en sidebar desktop (solo ADMIN) y acceso desde menú del avatar en `MobileTopBar`.
+- Endpoint temporal `POST /api/auth/become-teacher` **eliminado** de backend y frontend; el rol se asigna vía panel admin.
+- Seed `admin_demo@titi.local` (rol `ADMIN`) idempotente.
 
-**Alcance:**
-- Feed mezcla posts sociales con **actividad académica** (inscripciones, completados, logros desbloqueados de gente que sigo).
-- Recomendaciones de cursos basadas en amigos (query Cypher sobre `:INSCRITO_EN`).
-- Propagación de eventos educativos a Neo4j (`INSCRITO_EN`, `COMPLETO_CURSO`).
-- Notificaciones de amigos: "X se inscribió en Y", "X desbloqueó logro Z".
-- Panel admin separado:
-  - Verificación de profesores.
-  - Cambio de rol de cualquier usuario.
-  - Aprobación de cursos sensibles (opcional).
-  - Estadísticas generales (totales, usuarios activos, top cursos).
-  - CRUD de categorías.
-- Endpoint temporal `POST /api/auth/become-teacher` se elimina aquí.
+**Decisiones tomadas:**
+- Nodos `:CursoRef` con `cursoId` en Neo4j en vez de duplicar `Curso` en ambas DBs.
+- Notificaciones de logros via el mismo grafo Neo4j (`:RECIBIO`/`:SOBRE`) que likes/follows.
+- Admin override del 409: puede borrar curso con inscripciones (cascada completa). Fix de timeout de transacción a `{ timeout: 20000, maxWait: 10000 }` por la cascada contra DB remota.
+- Sin paginación pesada en feed académico (limit alcanza; paginación real en Etapa 5).
 
-**Deliverables:**
-- `routes/admin.js` completo.
-- Tarjeta de "Actividad académica" en `Feed.jsx`.
-- Sección "Recomendados por tus amigos" en `Courses.jsx`.
-- `pages/admin/*` (3 páginas).
-- Guard `requireRole('ADMIN')` en App.jsx.
+**Deuda técnica (a Etapa 5):**
+- El delete admin borra certificados: `Certificado.cursoId` es `NOT NULL`, no se pueden preservar sin migración a nullable + snapshot del título.
+- `PUT /courses/:id/approve` quedó como fallback opcional (el `publicado` del profesor alcanza).
 
-**Criterios de aceptación:**
-- [ ] Al inscribirme en un curso, mis seguidores reciben notificación y ven la actividad en su feed.
-- [ ] El catálogo muestra una sección "Tus amigos están aprendiendo X".
-- [ ] Admin verifica un profesor → ese profesor ya puede crear cursos sin el endpoint temporal.
-- [ ] Estadísticas son consistentes entre Neo4j y Postgres.
-
-**Riesgos:**
-- Doble fuente de verdad: cuidar que la propagación a Neo4j no falle silenciosamente (loguear pero no bloquear la operación principal).
-- Privacidad: el feed académico solo debe mostrar actividad de gente que sigo, nunca pública.
+**Smoke E2E:** ejecutado contra Aura + Postgres reales. Los 12 ítems del DoD (`AGENTS.md` §8) tildados. Detalle de subfases y commits en `AGENTS.md` §10.
 
 ---
 
@@ -832,6 +822,7 @@ if (data?.success) { /* ... */ }
 | Mensajes de error | Legibles en español ("Curso no encontrado", no "Course not found") |
 | Commits | `feat:`, `fix:`, `refactor:`, `docs:`, `chore:` en español |
 | Branches | `main` es producción. Trabajo en feature branches. PRs requieren review |
+| Versionado | SemVer alineado a etapas. Tag `vMAJOR.MINOR.0` al cerrar cada etapa (ver §16) |
 | Tailwind | Solo colores `titi-*` y `gray-*`. No hardcodear hex. Solo `rounded-xl`/`2xl` en cards |
 | Tipografía | `font-sans` (Nunito por config). Pesos: `font-medium`, `font-bold`, `font-extrabold`, `font-black` solo para números de racha |
 
@@ -865,3 +856,37 @@ Antes de tocar código en una sesión nueva:
    - `titi-frontend-patterns` — patrones de páginas, componentes y consumo de API.
    - `titi-dual-db` — cuándo Neo4j vs Postgres y cómo sincronizar.
 5. **Usa CodeGraph** (`codegraph_*`) para búsquedas estructurales antes que `grep`.
+
+---
+
+## 16. Versionado y releases en git
+
+Cada **cierre de etapa** sube una **nueva versión** a git: merge a `main` + tag anotado SemVer + push. Versiones `0.x` hasta el deploy público; la Etapa 5 corta la **v1.0.0** (primer release de producción).
+
+| Etapa | Versión | Tag | Estado | Qué sube |
+|---|---|---|---|---|
+| Etapa 1 — Titi Social | `v0.1.0` | `v0.1.0` | ✅ | Red social base (feed, posts, perfil, follow) |
+| Etapa 2 — Módulo Educativo Base | `v0.2.0` | `v0.2.0` | ✅ | Cursos / módulos / lecciones / materiales + inscripciones |
+| Etapa 3 — Evaluaciones y Progreso | `v0.3.0` | `v0.3.0` | ✅ | Quizzes, racha, logros, certificados |
+| Etapa 4 — Integración Social + Admin | `v0.4.0` | `v0.4.0` | ✅ | Feed académico, recomendaciones, panel admin |
+| Etapa 5 — Pulido y Deploy | `v1.0.0` | `v1.0.0` | 📋 | Cloudinary, tests, CI/CD, deploy público |
+
+**Reglas:**
+- Solo se taggea sobre `main`, con árbol limpio y el smoke test de la etapa pasado.
+- Un tag `vX.Y.0` marca el cierre de una etapa. Bugfixes sueltos dentro de una etapa ya cerrada → bump de patch (`v0.4.1`, `v0.4.2`…).
+- El `MAJOR` salta a `1` recién en Etapa 5 (deploy público). Antes todo es `0.x` (sin garantía de estabilidad).
+- Mensaje de tag describe la etapa, no el detalle (el detalle vive en §9 y en `AGENTS.md`).
+
+**Proceso de release al cerrar una etapa:**
+
+```bash
+# en la feature branch de la etapa, todo verificado y smoke test OK
+git checkout main
+git merge --no-ff etapa-4              # o mergear vía PR
+git tag -a v0.4.0 -m "Etapa 4 — Integración Social + Admin"
+git push origin main --follow-tags     # sube commits + tag
+```
+
+**Identidad:** commits y tags con la identidad del proyecto (`abdair-coca <cocaabdair@gmail.com>`), sin `Co-Authored-By`.
+
+**Verificar releases existentes:** `git tag -l` lista las versiones; `git show v0.3.0` muestra el cierre de una etapa.
